@@ -303,11 +303,11 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - transparent click target, no visual overlay */}
       <div 
         className={cn(
-          "fixed inset-0 z-[999] bg-black/20 transition-opacity duration-300",
-          isClosing ? "opacity-0" : isOpening ? "opacity-0" : "opacity-100"
+          "fixed inset-0 z-[999]",
+          isClosing && "pointer-events-none"
         )}
         onClick={handleClose}
       />
