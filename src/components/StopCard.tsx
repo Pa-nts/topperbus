@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Stop, Route, StopPredictions, Prediction, VehicleLocation } from '@/types/transit';
 import { fetchPredictions, fetchVehicleLocations } from '@/lib/api';
-import { Clock, MapPin, X, RefreshCw, Bus, Navigation } from 'lucide-react';
+import { Clock, MapPin, X, RefreshCw, Bus, Navigation, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface StopCardProps {
@@ -9,6 +9,7 @@ interface StopCardProps {
   route: Route;
   allRoutes: Route[];
   onClose: () => void;
+  isClosing?: boolean;
 }
 
 interface FlatPrediction {
@@ -32,7 +33,7 @@ const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * c;
 };
 
-const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
+const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCardProps) => {
   const [predictions, setPredictions] = useState<StopPredictions[]>([]);
   const [vehicles, setVehicles] = useState<VehicleLocation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,176 +148,198 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 md:left-auto md:right-4 md:bottom-4 md:w-96 bg-card border border-border rounded-t-2xl md:rounded-2xl shadow-2xl animate-slide-up z-[1000] max-h-[70vh] flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b border-border flex-shrink-0">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="flex -space-x-1">
-                {routesAtStop.length > 0 ? (
-                  routesAtStop.map(r => (
-                    <span
-                      key={r.tag}
-                      className="w-3 h-3 rounded-full flex-shrink-0 ring-1 ring-card"
-                      style={{ backgroundColor: `#${r.color === '000000' ? '6B7280' : r.color}` }}
-                    />
-                  ))
-                ) : (
-                  <span
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: `#${route.color === '000000' ? '6B7280' : route.color}` }}
-                  />
-                )}
-              </div>
-              <span className="text-xs text-muted-foreground font-medium">
-                Stop {stop.stopId}
-              </span>
-            </div>
-            <h3 className="text-lg font-semibold text-foreground truncate">
-              {stop.shortTitle || stop.title}
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 -m-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        
-        <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <MapPin className="w-3 h-3" />
-            <span>{stop.lat.toFixed(5)}, {stop.lon.toFixed(5)}</span>
-          </div>
-          <button
-            onClick={fetchAllData}
-            className="flex items-center gap-1 hover:text-foreground transition-colors"
-          >
-            <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
-            <span>Updated {lastUpdate.toLocaleTimeString()}</span>
-          </button>
-        </div>
-        
-        {/* Route filter */}
-        {routesAtStop.length > 1 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            <button
-              onClick={() => setSelectedRouteFilter(null)}
-              className={cn(
-                "px-2.5 py-1 rounded-lg text-xs font-medium transition-colors",
-                selectedRouteFilter === null
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
-              )}
-            >
-              All Routes
-            </button>
-            {routesAtStop.map(r => {
-              const color = r.color === '000000' ? '6B7280' : r.color;
-              const isSelected = selectedRouteFilter === r.tag;
-              return (
-                <button
-                  key={r.tag}
-                  onClick={() => setSelectedRouteFilter(r.tag)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5",
-                    isSelected
-                      ? "ring-2 ring-offset-1 ring-offset-card"
-                      : "hover:opacity-80"
-                  )}
-                  style={{ 
-                    backgroundColor: isSelected ? `#${color}` : `#${color}30`,
-                    color: isSelected ? 'white' : `#${color}`,
-                    ...(isSelected && { '--tw-ring-color': `#${color}` } as React.CSSProperties)
-                  }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isSelected ? 'white' : `#${color}` }} />
-                  {r.title.replace('Route ', '').split(' ')[0]}
-                </button>
-              );
-            })}
-          </div>
+    <>
+      {/* Backdrop */}
+      <div 
+        className={cn(
+          "fixed inset-0 bg-background/60 backdrop-blur-sm z-[999]",
+          isClosing ? "animate-fade-out" : "animate-fade-in"
         )}
-      </div>
-
-      {/* Predictions */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {loading && predictions.length === 0 ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              <span>Loading arrivals...</span>
-            </div>
-          </div>
-        ) : sortedPredictions.length === 0 ? (
-          <div className="text-center py-8">
-            <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-muted-foreground">No upcoming arrivals</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {sortedPredictions.slice(0, 8).map((item, i) => {
-              const nearestStop = getNearestStopForBus(item.prediction.vehicle, item.routeTag);
-              const isFirst = i === 0;
-              
-              return (
-                <div
-                  key={`${item.routeTag}-${item.prediction.vehicle}-${i}`}
-                  className={cn(
-                    "p-3 rounded-xl transition-all",
-                    getTimeBg(item.prediction.minutes, isFirst)
+        onClick={onClose}
+      />
+      
+      {/* Panel */}
+      <div 
+        className={cn(
+          "fixed top-0 left-0 right-0 bg-card border-b border-border rounded-b-2xl shadow-2xl z-[1000] max-h-[70vh] flex flex-col",
+          isClosing ? "animate-slide-up-out" : "animate-slide-down"
+        )}
+      >
+        {/* Header */}
+        <div className="p-4 border-b border-border flex-shrink-0">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="flex -space-x-1">
+                  {routesAtStop.length > 0 ? (
+                    routesAtStop.map(r => (
+                      <span
+                        key={r.tag}
+                        className="w-3 h-3 rounded-full flex-shrink-0 ring-1 ring-card"
+                        style={{ backgroundColor: `#${r.color === '000000' ? '6B7280' : r.color}` }}
+                      />
+                    ))
+                  ) : (
+                    <span
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: `#${route.color === '000000' ? '6B7280' : route.color}` }}
+                    />
                   )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: `#${item.routeColor}` }}
-                      >
-                        <Bus className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">
-                            Bus #{item.prediction.vehicle}
-                          </span>
-                          <span 
-                            className="text-xs px-1.5 py-0.5 rounded"
-                            style={{ 
-                              backgroundColor: `#${item.routeColor}30`,
-                              color: `#${item.routeColor}`
-                            }}
-                          >
-                            {item.routeTitle}
-                          </span>
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">
+                  Stop {stop.stopId}
+                </span>
+              </div>
+              <h3 className="text-lg font-semibold text-foreground truncate">
+                {stop.shortTitle || stop.title}
+              </h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 -m-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <MapPin className="w-3 h-3" />
+              <span>{stop.lat.toFixed(5)}, {stop.lon.toFixed(5)}</span>
+            </div>
+            <button
+              onClick={fetchAllData}
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+            >
+              <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
+              <span>Updated {lastUpdate.toLocaleTimeString()}</span>
+            </button>
+          </div>
+          
+          {/* Route filter */}
+          {routesAtStop.length > 1 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              <button
+                onClick={() => setSelectedRouteFilter(null)}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-xs font-medium transition-colors",
+                  selectedRouteFilter === null
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                )}
+              >
+                All Routes
+              </button>
+              {routesAtStop.map(r => {
+                const color = r.color === '000000' ? '6B7280' : r.color;
+                const isSelected = selectedRouteFilter === r.tag;
+                return (
+                  <button
+                    key={r.tag}
+                    onClick={() => setSelectedRouteFilter(r.tag)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5",
+                      isSelected
+                        ? "ring-2 ring-offset-1 ring-offset-card"
+                        : "hover:opacity-80"
+                    )}
+                    style={{ 
+                      backgroundColor: isSelected ? `#${color}` : `#${color}30`,
+                      color: isSelected ? 'white' : `#${color}`,
+                      ...(isSelected && { '--tw-ring-color': `#${color}` } as React.CSSProperties)
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isSelected ? 'white' : `#${color}` }} />
+                    {r.title.replace('Route ', '').split(' ')[0]}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Predictions */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {loading && predictions.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>Loading arrivals...</span>
+              </div>
+            </div>
+          ) : sortedPredictions.length === 0 ? (
+            <div className="text-center py-8">
+              <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground">No upcoming arrivals</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {sortedPredictions.slice(0, 8).map((item, i) => {
+                const nearestStop = getNearestStopForBus(item.prediction.vehicle, item.routeTag);
+                const isFirst = i === 0;
+                
+                return (
+                  <div
+                    key={`${item.routeTag}-${item.prediction.vehicle}-${i}`}
+                    className={cn(
+                      "p-3 rounded-xl transition-all",
+                      getTimeBg(item.prediction.minutes, isFirst)
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-10 h-10 rounded-lg flex items-center justify-center"
+                          style={{ backgroundColor: `#${item.routeColor}` }}
+                        >
+                          <Bus className="w-5 h-5 text-white" />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                          <Navigation className="w-3 h-3" />
-                          {nearestStop ? `At: ${nearestStop}` : `Heading to: ${item.directionTitle}`}
-                        </p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">
+                              Bus #{item.prediction.vehicle}
+                            </span>
+                            <span 
+                              className="text-xs px-1.5 py-0.5 rounded"
+                              style={{ 
+                                backgroundColor: `#${item.routeColor}30`,
+                                color: `#${item.routeColor}`
+                              }}
+                            >
+                              {item.routeTitle}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <Navigation className="w-3 h-3" />
+                            {nearestStop ? `At: ${nearestStop}` : `Heading to: ${item.directionTitle}`}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className={cn(
-                      "text-right",
-                      getTimeColor(item.prediction.minutes)
-                    )}>
-                      <div className="text-lg font-bold">
-                        {item.prediction.minutes === 0 ? 'NOW' : `${item.prediction.minutes}`}
+                      <div className={cn(
+                        "text-right",
+                        getTimeColor(item.prediction.minutes)
+                      )}>
+                        <div className="text-lg font-bold">
+                          {item.prediction.minutes === 0 ? 'NOW' : `${item.prediction.minutes}`}
+                        </div>
+                        {item.prediction.minutes > 0 && (
+                          <div className="text-xs opacity-70">min</div>
+                        )}
                       </div>
-                      {item.prediction.minutes > 0 && (
-                        <div className="text-xs opacity-70">min</div>
-                      )}
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
+        
+        {/* Pull indicator */}
+        <div className="flex-shrink-0 py-2 flex justify-center">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

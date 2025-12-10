@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Route, VehicleLocation, Stop } from '@/types/transit';
 import { fetchRouteConfig, fetchVehicleLocations } from '@/lib/api';
@@ -13,6 +13,8 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+const CLOSE_ANIMATION_DURATION = 250;
+
 const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [routes, setRoutes] = useState<Route[]>([]);
@@ -24,6 +26,9 @@ const Index = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [view, setView] = useState<'map' | 'list'>('map');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isStopClosing, setIsStopClosing] = useState(false);
+  
+  const pendingStopRef = useRef<{ stop: Stop; route: Route } | null>(null);
 
   // Initial data load
   useEffect(() => {
@@ -69,26 +74,54 @@ const Index = () => {
     for (const route of routeData) {
       const stop = route.stops.find(s => s.stopId === stopId || s.tag === stopId);
       if (stop) {
-        setSelectedStop(stop);
-        setSelectedStopRoute(route);
-        setSearchParams({ stop: stop.stopId });
+        openStop(stop, route);
         return;
       }
     }
     toast.error('Stop not found');
   };
 
-  const handleStopClick = useCallback((stop: Stop, route: Route) => {
+  const openStop = (stop: Stop, route: Route) => {
     setSelectedStop(stop);
     setSelectedStopRoute(route);
     setSearchParams({ stop: stop.stopId });
-  }, [setSearchParams]);
-
-  const handleCloseStop = () => {
-    setSelectedStop(null);
-    setSelectedStopRoute(null);
-    setSearchParams({});
   };
+
+  const handleStopClick = useCallback((stop: Stop, route: Route) => {
+    // If a stop is already open, close it first with animation
+    if (selectedStop) {
+      // Store the pending stop to open after close animation
+      pendingStopRef.current = { stop, route };
+      setIsStopClosing(true);
+      
+      setTimeout(() => {
+        setSelectedStop(null);
+        setSelectedStopRoute(null);
+        setIsStopClosing(false);
+        
+        // Open the new stop after a brief delay
+        setTimeout(() => {
+          if (pendingStopRef.current) {
+            openStop(pendingStopRef.current.stop, pendingStopRef.current.route);
+            pendingStopRef.current = null;
+          }
+        }, 50);
+      }, CLOSE_ANIMATION_DURATION);
+    } else {
+      openStop(stop, route);
+    }
+  }, [selectedStop, setSearchParams]);
+
+  const handleCloseStop = useCallback(() => {
+    setIsStopClosing(true);
+    
+    setTimeout(() => {
+      setSelectedStop(null);
+      setSelectedStopRoute(null);
+      setIsStopClosing(false);
+      setSearchParams({});
+    }, CLOSE_ANIMATION_DURATION);
+  }, [setSearchParams]);
 
   const handleQRScan = (stopId: string) => {
     setShowScanner(false);
@@ -254,6 +287,7 @@ const Index = () => {
           route={selectedStopRoute}
           allRoutes={routes}
           onClose={handleCloseStop}
+          isClosing={isStopClosing}
         />
       )}
 
