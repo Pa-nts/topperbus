@@ -37,6 +37,8 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
   const [vehicles, setVehicles] = useState<VehicleLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [selectedRouteFilter, setSelectedRouteFilter] = useState<string | null>(null);
+  const [routesAtStop, setRoutesAtStop] = useState<Route[]>([]);
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -46,6 +48,7 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
       const routesWithStop = allRoutes.filter(r => 
         r.stops.some(s => `${s.lat.toFixed(4)},${s.lon.toFixed(4)}` === stopLocationKey)
       );
+      setRoutesAtStop(routesWithStop);
       
       const allPreds: StopPredictions[] = [];
       for (const r of routesWithStop) {
@@ -81,6 +84,9 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
     const flat: FlatPrediction[] = [];
     
     predictions.forEach(pred => {
+      // Filter by selected route if set
+      if (selectedRouteFilter && pred.routeTag !== selectedRouteFilter) return;
+      
       const predRoute = allRoutes.find(r => r.tag === pred.routeTag);
       const color = predRoute?.color === '000000' ? '6B7280' : predRoute?.color || '6B7280';
       
@@ -98,7 +104,7 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
     });
     
     return flat.sort((a, b) => a.prediction.minutes - b.prediction.minutes);
-  }, [predictions, allRoutes]);
+  }, [predictions, allRoutes, selectedRouteFilter]);
 
   // Find the nearest stop to a bus's current location
   const getNearestStopForBus = (vehicleId: string, routeTag: string): string | null => {
@@ -180,6 +186,47 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
             <span>Updated {lastUpdate.toLocaleTimeString()}</span>
           </button>
         </div>
+        
+        {/* Route filter */}
+        {routesAtStop.length > 1 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            <button
+              onClick={() => setSelectedRouteFilter(null)}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-xs font-medium transition-colors",
+                selectedRouteFilter === null
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              )}
+            >
+              All Routes
+            </button>
+            {routesAtStop.map(r => {
+              const color = r.color === '000000' ? '6B7280' : r.color;
+              const isSelected = selectedRouteFilter === r.tag;
+              return (
+                <button
+                  key={r.tag}
+                  onClick={() => setSelectedRouteFilter(r.tag)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5",
+                    isSelected
+                      ? "ring-2 ring-offset-1 ring-offset-card"
+                      : "hover:opacity-80"
+                  )}
+                  style={{ 
+                    backgroundColor: isSelected ? `#${color}` : `#${color}30`,
+                    color: isSelected ? 'white' : `#${color}`,
+                    ...(isSelected && { '--tw-ring-color': `#${color}` } as React.CSSProperties)
+                  }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isSelected ? 'white' : `#${color}` }} />
+                  {r.title.replace('Route ', '').split(' ')[0]}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Predictions */}
