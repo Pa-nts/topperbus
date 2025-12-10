@@ -173,19 +173,19 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
 
   return (
     <>
-      {/* Backdrop - no blur to keep map visible */}
+      {/* Invisible backdrop for click-to-close */}
       <div 
         className={cn(
-          "fixed inset-0 bg-background/40 z-[999]",
+          "fixed inset-0 z-[999]",
           isClosing ? "animate-fade-out" : "animate-fade-in"
         )}
         onClick={onClose}
       />
       
-      {/* Panel */}
+      {/* Panel - limited height to show map and selected stop */}
       <div 
         className={cn(
-          "fixed top-0 left-0 right-0 bg-card border-b border-border rounded-b-2xl shadow-2xl z-[1000] max-h-[70vh] flex flex-col",
+          "fixed top-0 left-0 right-0 bg-card border-b border-border rounded-b-2xl shadow-2xl z-[1000] max-h-[50vh] flex flex-col",
           isClosing ? "animate-slide-up-out" : "animate-slide-down"
         )}
       >
