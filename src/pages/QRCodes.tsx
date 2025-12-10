@@ -183,7 +183,7 @@ const QRCodes = () => {
               <p className="text-xs text-muted-foreground mb-1">
                 Stop ID: {stop.stopId}
               </p>
-              <div className="flex flex-wrap justify-center gap-1 mb-3">
+              <div className="flex flex-wrap justify-center gap-1 mb-2">
                 {stopRoutes.map(route => (
                   <div 
                     key={route.tag}
@@ -197,6 +197,9 @@ const QRCodes = () => {
                   </div>
                 ))}
               </div>
+              <p className="text-[10px] text-muted-foreground text-center mb-3 break-all px-2">
+                topperbus.lovable.app/?stop={stop.stopId}
+              </p>
               <Button 
                 variant="ghost" 
                 size="sm" 
