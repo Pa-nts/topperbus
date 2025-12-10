@@ -1,16 +1,14 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Stop, Route, StopPredictions, Prediction, VehicleLocation } from '@/types/transit';
 import { fetchPredictions, fetchVehicleLocations } from '@/lib/api';
 import { Clock, MapPin, X, RefreshCw, Bus, Navigation } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 
 interface StopCardProps {
   stop: Stop;
   route: Route;
   allRoutes: Route[];
   onClose: () => void;
-  isClosing?: boolean;
 }
 
 interface FlatPrediction {
@@ -34,19 +32,27 @@ const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * c;
 };
 
-const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCardProps) => {
+const MIN_HEIGHT = 45; // percentage
+const MAX_HEIGHT = 75; // percentage
+
+const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
   const [predictions, setPredictions] = useState<StopPredictions[]>([]);
   const [vehicles, setVehicles] = useState<VehicleLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [selectedRouteFilter, setSelectedRouteFilter] = useState<string | null>(null);
   const [routesAtStop, setRoutesAtStop] = useState<Route[]>([]);
-  const [isOpen, setIsOpen] = useState(true);
+  const [panelHeight, setPanelHeight] = useState(MIN_HEIGHT);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  
+  const panelRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef(0);
+  const dragStartHeight = useRef(0);
 
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      // Find all routes that have a stop at this location (using coordinate matching)
       const stopLocationKey = `${stop.lat.toFixed(4)},${stop.lon.toFixed(4)}`;
       const routesWithStop = allRoutes.filter(r => 
         r.stops.some(s => `${s.lat.toFixed(4)},${s.lon.toFixed(4)}` === stopLocationKey)
@@ -55,7 +61,6 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
       
       const allPreds: StopPredictions[] = [];
       for (const r of routesWithStop) {
-        // Find the stop tag for this route at this location
         const routeStop = r.stops.find(s => `${s.lat.toFixed(4)},${s.lon.toFixed(4)}` === stopLocationKey);
         if (routeStop) {
           const preds = await fetchPredictions(routeStop.tag, r.tag);
@@ -63,7 +68,6 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
         }
       }
       
-      // Fetch vehicle locations
       const vehicleData = await fetchVehicleLocations();
       setVehicles(vehicleData);
       
@@ -82,13 +86,58 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
     return () => clearInterval(interval);
   }, [stop.tag]);
 
-  // Handle drawer close
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      setIsOpen(false);
-      // Small delay to allow animation
-      setTimeout(onClose, 150);
+  // Drag handlers
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(true);
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    dragStartY.current = clientY;
+    dragStartHeight.current = panelHeight;
+  };
+
+  useEffect(() => {
+    const handleDragMove = (e: MouseEvent | TouchEvent) => {
+      if (!isDragging) return;
+      
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const deltaY = clientY - dragStartY.current;
+      const windowHeight = window.innerHeight;
+      const deltaPercent = (deltaY / windowHeight) * 100;
+      
+      const newHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, dragStartHeight.current + deltaPercent));
+      setPanelHeight(newHeight);
+    };
+
+    const handleDragEnd = () => {
+      if (!isDragging) return;
+      setIsDragging(false);
+      
+      // Snap to nearest point
+      const midPoint = (MIN_HEIGHT + MAX_HEIGHT) / 2;
+      if (panelHeight > midPoint) {
+        setPanelHeight(MAX_HEIGHT);
+      } else {
+        setPanelHeight(MIN_HEIGHT);
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleDragMove);
+      window.addEventListener('mouseup', handleDragEnd);
+      window.addEventListener('touchmove', handleDragMove);
+      window.addEventListener('touchend', handleDragEnd);
     }
+
+    return () => {
+      window.removeEventListener('mousemove', handleDragMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('touchmove', handleDragMove);
+      window.removeEventListener('touchend', handleDragEnd);
+    };
+  }, [isDragging, panelHeight]);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(onClose, 200);
   };
 
   // Flatten and sort all predictions by time
@@ -96,7 +145,6 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
     const flat: FlatPrediction[] = [];
     
     predictions.forEach(pred => {
-      // Filter by selected route if set
       if (selectedRouteFilter && pred.routeTag !== selectedRouteFilter) return;
       
       const predRoute = allRoutes.find(r => r.tag === pred.routeTag);
@@ -118,7 +166,8 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
     return flat.sort((a, b) => a.prediction.minutes - b.prediction.minutes);
   }, [predictions, allRoutes, selectedRouteFilter]);
 
-  // Find the nearest stop to a bus's current location
+  const hasMorePredictions = sortedPredictions.length > 4;
+
   const getNearestStopForBus = (vehicleId: string, routeTag: string): string | null => {
     const vehicle = vehicles.find(v => v.id === vehicleId && v.routeTag === routeTag);
     if (!vehicle) return null;
@@ -137,7 +186,6 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
       }
     }
     
-    // Only return if within 500 meters of a stop
     if (nearestStop && minDistance < 500) {
       return nearestStop.title;
     }
@@ -182,20 +230,31 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
     return 'bg-secondary';
   };
 
-  const hasMorePredictions = sortedPredictions.length > 4;
-
   return (
-    <Drawer 
-      open={isOpen && !isClosing} 
-      onOpenChange={handleOpenChange}
-      direction="top"
-      modal={false}
-      snapPoints={hasMorePredictions ? [0.45, 0.75] : [0.45]}
-      activeSnapPoint={hasMorePredictions ? 0.45 : undefined}
-    >
-      <DrawerContent className="top-0 bottom-auto mt-0 rounded-t-none rounded-b-2xl flex flex-col">
+    <>
+      {/* Backdrop */}
+      <div 
+        className={cn(
+          "fixed inset-0 z-[999] bg-black/20 transition-opacity duration-200",
+          isClosing ? "opacity-0" : "opacity-100"
+        )}
+        onClick={handleClose}
+      />
+      
+      {/* Panel */}
+      <div 
+        ref={panelRef}
+        className={cn(
+          "fixed top-0 left-0 right-0 bg-card border-b border-border rounded-b-2xl shadow-2xl z-[1000] flex flex-col transition-transform duration-200",
+          isClosing && "-translate-y-full"
+        )}
+        style={{ 
+          height: `${panelHeight}vh`,
+          transition: isDragging ? 'none' : 'height 0.2s ease-out, transform 0.2s ease-out'
+        }}
+      >
         {/* Header */}
-        <DrawerHeader className="p-4 border-b border-border flex-shrink-0">
+        <div className="p-4 border-b border-border flex-shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -219,12 +278,12 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
                   Stop {stop.stopId}
                 </span>
               </div>
-              <DrawerTitle className="text-lg font-semibold text-foreground truncate text-left">
+              <h3 className="text-lg font-semibold text-foreground truncate">
                 {stop.shortTitle || stop.title}
-              </DrawerTitle>
+              </h3>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2 -m-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-5 h-5" />
@@ -285,7 +344,7 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
               })}
             </div>
           )}
-        </DrawerHeader>
+        </div>
 
         {/* Predictions */}
         <div className="flex-1 overflow-y-auto p-4">
@@ -371,12 +430,18 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
           )}
         </div>
         
-        {/* Pull indicator at bottom */}
-        <div className="flex-shrink-0 py-2 flex justify-center">
-          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
-        </div>
-      </DrawerContent>
-    </Drawer>
+        {/* Drag handle */}
+        {hasMorePredictions && (
+          <div 
+            className="flex-shrink-0 py-3 flex justify-center cursor-grab active:cursor-grabbing touch-none select-none"
+            onMouseDown={handleDragStart}
+            onTouchStart={handleDragStart}
+          >
+            <div className="w-12 h-1.5 rounded-full bg-muted-foreground/40" />
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 
