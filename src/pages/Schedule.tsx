@@ -45,6 +45,35 @@ const Schedule = () => {
     return vehicles.filter(v => v.routeTag === routeTag);
   };
 
+  const getNextStopForBus = (vehicle: VehicleLocation, route: Route): string | null => {
+    const direction = route.directions.find(d => d.tag === vehicle.dirTag);
+    if (!direction || direction.stops.length === 0) return null;
+    
+    // Find the closest stop to the bus's current position
+    let closestStopIndex = 0;
+    let minDistance = Infinity;
+    
+    direction.stops.forEach((stopTag, index) => {
+      const stop = route.stops.find(s => s.tag === stopTag);
+      if (stop) {
+        const distance = Math.sqrt(
+          Math.pow(stop.lat - vehicle.lat, 2) + Math.pow(stop.lon - vehicle.lon, 2)
+        );
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestStopIndex = index;
+        }
+      }
+    });
+    
+    // Get the next stop (or current if at the end)
+    const nextStopIndex = Math.min(closestStopIndex + 1, direction.stops.length - 1);
+    const nextStopTag = direction.stops[nextStopIndex];
+    const nextStop = route.stops.find(s => s.tag === nextStopTag);
+    
+    return nextStop?.title || null;
+  };
+
   const displayedRoutes = selectedRoute 
     ? routes.filter(r => r.tag === selectedRoute)
     : routes;
@@ -220,22 +249,32 @@ const Schedule = () => {
                     <Bus className="w-4 h-4" />
                     Active Buses
                   </h3>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col gap-2">
                     {routeVehicles.map(vehicle => {
                       const speedMph = Math.round(vehicle.speedKmHr * 0.621371);
+                      const nextStop = getNextStopForBus(vehicle, route);
                       return (
                         <div 
                           key={vehicle.id}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary text-sm"
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg bg-secondary text-sm"
                         >
                           <div 
-                            className="w-2 h-2 rounded-full"
+                            className="w-3 h-3 rounded-full flex-shrink-0"
                             style={{ backgroundColor: `#${color}` }}
                           />
-                          Bus {vehicle.id}
-                          <span className="text-xs text-muted-foreground">
-                            {speedMph} mph
-                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">Bus {vehicle.id}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {speedMph} mph
+                              </span>
+                            </div>
+                            {nextStop && (
+                              <p className="text-xs text-green-400 truncate">
+                                → {nextStop}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       );
                     })}

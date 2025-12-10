@@ -37,6 +37,7 @@ export interface Route {
 export interface VehicleLocation {
   id: string;
   routeTag: string;
+  dirTag: string;
   lat: number;
   lon: number;
   heading: number;

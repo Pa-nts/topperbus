@@ -227,6 +227,38 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, is
     });
   }, [displayedRoutes, selectedStop, onStopClick]);
 
+  // Helper to get the next stop a bus is heading to
+  const getNextStopForBus = (vehicle: VehicleLocation, route: Route | undefined): string | null => {
+    if (!route) return null;
+    
+    const direction = route.directions.find(d => d.tag === vehicle.dirTag);
+    if (!direction || direction.stops.length === 0) return null;
+    
+    // Find the closest stop to the bus's current position
+    let closestStopIndex = 0;
+    let minDistance = Infinity;
+    
+    direction.stops.forEach((stopTag, index) => {
+      const stop = route.stops.find(s => s.tag === stopTag);
+      if (stop) {
+        const distance = Math.sqrt(
+          Math.pow(stop.lat - vehicle.lat, 2) + Math.pow(stop.lon - vehicle.lon, 2)
+        );
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestStopIndex = index;
+        }
+      }
+    });
+    
+    // Get the next stop (or current if at the end)
+    const nextStopIndex = Math.min(closestStopIndex + 1, direction.stops.length - 1);
+    const nextStopTag = direction.stops[nextStopIndex];
+    const nextStop = route.stops.find(s => s.tag === nextStopTag);
+    
+    return nextStop?.title || null;
+  };
+
   // Update vehicle markers
   useEffect(() => {
     if (!vehicleMarkersRef.current) return;
@@ -238,6 +270,7 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, is
     filteredVehicles.forEach(vehicle => {
       const route = routes.find(r => r.tag === vehicle.routeTag);
       const color = route ? (route.color === '000000' ? '6B7280' : route.color) : '6B7280';
+      const nextStop = getNextStopForBus(vehicle, route);
       
       const icon = L.divIcon({
         className: 'custom-bus-marker',
@@ -292,6 +325,9 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, is
             <div style="font-size: 12px; opacity: 0.7; margin-top: 4px;">
               ${route?.title || vehicle.routeTag}
             </div>
+            ${nextStop ? `<div style="font-size: 11px; color: #22c55e; margin-top: 2px;">
+              → ${nextStop}
+            </div>` : ''}
             <div style="font-size: 11px; opacity: 0.5; margin-top: 2px;">
               Speed: ${speedMph} mph
             </div>
