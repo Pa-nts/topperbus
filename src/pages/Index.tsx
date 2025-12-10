@@ -25,6 +25,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
   const [view, setView] = useState<'map' | 'list'>('map');
+  const [stopSearch, setStopSearch] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isStopClosing, setIsStopClosing] = useState(false);
   
@@ -85,6 +86,10 @@ const Index = () => {
     setSelectedStop(stop);
     setSelectedStopRoute(route);
     setSearchParams({ stop: stop.stopId });
+    // Switch to map view on mobile when selecting a stop
+    if (view === 'list') {
+      setView('map');
+    }
   };
 
   const handleStopClick = useCallback((stop: Stop, route: Route) => {
@@ -276,6 +281,8 @@ const Index = () => {
             routes={routes}
             selectedRoute={selectedRoute}
             onStopSelect={handleStopClick}
+            search={stopSearch}
+            onSearchChange={setStopSearch}
           />
         </div>
       </div>
