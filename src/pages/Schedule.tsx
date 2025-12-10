@@ -144,20 +144,9 @@ const Schedule = () => {
   const formatTimeRange = (minutes: number | null): string => {
     if (minutes === null) return '--';
     if (minutes === 0) return 'Now';
-    
-    const now = new Date();
-    const minTime = new Date(now.getTime() + Math.max(0, minutes - 2) * 60000);
-    const maxTime = new Date(now.getTime() + (minutes + 2) * 60000);
-    
-    const formatTime = (date: Date) => {
-      return date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      }).toLowerCase();
-    };
-    
-    return `${formatTime(minTime)} - ${formatTime(maxTime)}`;
+    const minTime = Math.max(0, minutes - 2);
+    const maxTime = minutes + 2;
+    return `${minTime}-${maxTime} min`;
   };
 
   const displayedRoutes = selectedRoute 
