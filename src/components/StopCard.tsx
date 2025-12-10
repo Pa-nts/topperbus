@@ -56,8 +56,21 @@ const isRouteInService = (routeTag: string): boolean => {
   return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
 };
 
-const MIN_HEIGHT = 45; // percentage
+// Height constants based on content
+const HEADER_HEIGHT = 180; // approx header height in pixels
+const PREDICTION_ITEM_HEIGHT = 70; // approx height per prediction item
+const DRAG_HANDLE_HEIGHT = 40; // drag handle height
 const MAX_HEIGHT = 75; // percentage
+
+// Calculate dynamic minimum height based on number of predictions (show up to 3)
+const calculateMinHeight = (predCount: number): number => {
+  const windowHeight = window.innerHeight;
+  const itemsToShow = Math.min(predCount, 3);
+  const contentHeight = HEADER_HEIGHT + (itemsToShow * PREDICTION_ITEM_HEIGHT) + DRAG_HANDLE_HEIGHT;
+  // Add extra space for "no arrivals" message if no predictions
+  const minContentHeight = predCount === 0 ? HEADER_HEIGHT + 150 + DRAG_HANDLE_HEIGHT : contentHeight;
+  return Math.min(MAX_HEIGHT, (minContentHeight / windowHeight) * 100);
+};
 
 const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
   const [predictions, setPredictions] = useState<StopPredictions[]>([]);
@@ -66,7 +79,7 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [selectedRouteFilter, setSelectedRouteFilter] = useState<string | null>(null);
   const [routesAtStop, setRoutesAtStop] = useState<Route[]>([]);
-  const [panelHeight, setPanelHeight] = useState(MIN_HEIGHT);
+  const [panelHeight, setPanelHeight] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   
@@ -110,60 +123,6 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
     return () => clearInterval(interval);
   }, [stop.tag]);
 
-  // Drag handlers
-  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
-    setIsDragging(true);
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    dragStartY.current = clientY;
-    dragStartHeight.current = panelHeight;
-  };
-
-  useEffect(() => {
-    const handleDragMove = (e: MouseEvent | TouchEvent) => {
-      if (!isDragging) return;
-      
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      const deltaY = clientY - dragStartY.current;
-      const windowHeight = window.innerHeight;
-      const deltaPercent = (deltaY / windowHeight) * 100;
-      
-      const newHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, dragStartHeight.current + deltaPercent));
-      setPanelHeight(newHeight);
-    };
-
-    const handleDragEnd = () => {
-      if (!isDragging) return;
-      setIsDragging(false);
-      
-      // Snap to nearest point
-      const midPoint = (MIN_HEIGHT + MAX_HEIGHT) / 2;
-      if (panelHeight > midPoint) {
-        setPanelHeight(MAX_HEIGHT);
-      } else {
-        setPanelHeight(MIN_HEIGHT);
-      }
-    };
-
-    if (isDragging) {
-      window.addEventListener('mousemove', handleDragMove);
-      window.addEventListener('mouseup', handleDragEnd);
-      window.addEventListener('touchmove', handleDragMove);
-      window.addEventListener('touchend', handleDragEnd);
-    }
-
-    return () => {
-      window.removeEventListener('mousemove', handleDragMove);
-      window.removeEventListener('mouseup', handleDragEnd);
-      window.removeEventListener('touchmove', handleDragMove);
-      window.removeEventListener('touchend', handleDragEnd);
-    };
-  }, [isDragging, panelHeight]);
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(onClose, 200);
-  };
-
   // Check which routes at this stop are currently in service
   const routesInService = useMemo(() => {
     return routesAtStop.filter(r => isRouteInService(r.tag));
@@ -202,7 +161,69 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
     return flat.sort((a, b) => a.prediction.minutes - b.prediction.minutes);
   }, [predictions, allRoutes, selectedRouteFilter]);
 
-  
+  // Calculate minimum height based on predictions
+  const minHeight = calculateMinHeight(sortedPredictions.length);
+
+  // Update panel height when predictions change
+  useEffect(() => {
+    if (!isDragging && panelHeight === null) {
+      setPanelHeight(minHeight);
+    }
+  }, [sortedPredictions.length, isDragging, minHeight, panelHeight]);
+
+  // Drag handlers
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(true);
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    dragStartY.current = clientY;
+    dragStartHeight.current = panelHeight || minHeight;
+  };
+
+  useEffect(() => {
+    const handleDragMove = (e: MouseEvent | TouchEvent) => {
+      if (!isDragging) return;
+      
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const deltaY = clientY - dragStartY.current;
+      const windowHeight = window.innerHeight;
+      const deltaPercent = (deltaY / windowHeight) * 100;
+      
+      const newHeight = Math.min(MAX_HEIGHT, Math.max(minHeight, dragStartHeight.current + deltaPercent));
+      setPanelHeight(newHeight);
+    };
+
+    const handleDragEnd = () => {
+      if (!isDragging) return;
+      setIsDragging(false);
+      
+      // Snap to nearest point
+      const midPoint = (minHeight + MAX_HEIGHT) / 2;
+      if ((panelHeight || minHeight) > midPoint) {
+        setPanelHeight(MAX_HEIGHT);
+      } else {
+        setPanelHeight(minHeight);
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleDragMove);
+      window.addEventListener('mouseup', handleDragEnd);
+      window.addEventListener('touchmove', handleDragMove);
+      window.addEventListener('touchend', handleDragEnd);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleDragMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('touchmove', handleDragMove);
+      window.removeEventListener('touchend', handleDragEnd);
+    };
+  }, [isDragging, panelHeight, minHeight]);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(onClose, 200);
+  };
 
   const getNearestStopForBus = (vehicleId: string, routeTag: string): string | null => {
     const vehicle = vehicles.find(v => v.id === vehicleId && v.routeTag === routeTag);
@@ -285,7 +306,7 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
           isClosing && "-translate-y-full"
         )}
         style={{ 
-          height: `${panelHeight}vh`,
+          height: `${panelHeight || minHeight}vh`,
           transition: isDragging ? 'none' : 'height 0.2s ease-out, transform 0.2s ease-out'
         }}
       >
