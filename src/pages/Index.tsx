@@ -8,7 +8,7 @@ import StopCard from '@/components/StopCard';
 import StopList from '@/components/StopList';
 import QRScanner from '@/components/QRScanner';
 import RouteLegend from '@/components/RouteLegend';
-import { Bus, ScanLine, List, Map as MapIcon, RefreshCw, QrCode, Calendar } from 'lucide-react';
+import { Bus, ScanLine, List, Map as MapIcon, RefreshCw, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -150,13 +150,6 @@ const Index = () => {
                 title="Schedule"
               >
                 <Calendar className="w-5 h-5" />
-              </Link>
-              <Link
-                to="/qr-codes"
-                className="p-2.5 rounded-xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
-                title="QR Codes"
-              >
-                <QrCode className="w-5 h-5" />
               </Link>
               <button
                 onClick={handleRefresh}

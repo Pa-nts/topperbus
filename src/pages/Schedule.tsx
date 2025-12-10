@@ -221,21 +221,24 @@ const Schedule = () => {
                     Active Buses
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {routeVehicles.map(vehicle => (
-                      <div 
-                        key={vehicle.id}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary text-sm"
-                      >
+                    {routeVehicles.map(vehicle => {
+                      const speedMph = Math.round(vehicle.speedKmHr * 0.621371);
+                      return (
                         <div 
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: `#${color}` }}
-                        />
-                        Bus {vehicle.id}
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(vehicle.speedKmHr)} km/h
-                        </span>
-                      </div>
-                    ))}
+                          key={vehicle.id}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary text-sm"
+                        >
+                          <div 
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: `#${color}` }}
+                          />
+                          Bus {vehicle.id}
+                          <span className="text-xs text-muted-foreground">
+                            {speedMph} mph
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

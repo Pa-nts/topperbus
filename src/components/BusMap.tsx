@@ -283,6 +283,8 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, is
         iconAnchor: [16, 16],
       });
 
+      const speedMph = Math.round(vehicle.speedKmHr * 0.621371);
+      
       L.marker([vehicle.lat, vehicle.lon], { icon })
         .bindPopup(`
           <div style="padding: 4px;">
@@ -291,7 +293,7 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, is
               ${route?.title || vehicle.routeTag}
             </div>
             <div style="font-size: 11px; opacity: 0.5; margin-top: 2px;">
-              Speed: ${Math.round(vehicle.speedKmHr)} km/h
+              Speed: ${speedMph} mph
             </div>
           </div>
         `)

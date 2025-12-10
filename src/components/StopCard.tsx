@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Stop, Route, StopPredictions } from '@/types/transit';
+import { useEffect, useState, useMemo } from 'react';
+import { Stop, Route, StopPredictions, Prediction } from '@/types/transit';
 import { fetchPredictions } from '@/lib/api';
-import { Clock, MapPin, X, RefreshCw, ChevronRight } from 'lucide-react';
+import { Clock, MapPin, X, RefreshCw, Bus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface StopCardProps {
@@ -9,6 +9,14 @@ interface StopCardProps {
   route: Route;
   allRoutes: Route[];
   onClose: () => void;
+}
+
+interface FlatPrediction {
+  prediction: Prediction;
+  routeTag: string;
+  routeTitle: string;
+  routeColor: string;
+  directionTitle: string;
 }
 
 const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
@@ -19,7 +27,6 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
   const fetchAllPredictions = async () => {
     setLoading(true);
     try {
-      // Find all routes that serve this stop
       const routesWithStop = allRoutes.filter(r => 
         r.stops.some(s => s.tag === stop.tag)
       );
@@ -45,13 +52,59 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
     return () => clearInterval(interval);
   }, [stop.tag]);
 
+  // Flatten and sort all predictions by time
+  const sortedPredictions = useMemo(() => {
+    const flat: FlatPrediction[] = [];
+    
+    predictions.forEach(pred => {
+      const predRoute = allRoutes.find(r => r.tag === pred.routeTag);
+      const color = predRoute?.color === '000000' ? '6B7280' : predRoute?.color || '6B7280';
+      
+      pred.directions.forEach(dir => {
+        dir.predictions.forEach(p => {
+          flat.push({
+            prediction: p,
+            routeTag: pred.routeTag,
+            routeTitle: pred.routeTitle,
+            routeColor: color,
+            directionTitle: dir.title,
+          });
+        });
+      });
+    });
+    
+    return flat.sort((a, b) => a.prediction.minutes - b.prediction.minutes);
+  }, [predictions, allRoutes]);
+
+  // Find the next stop the bus is heading to based on direction
+  const getNextStopForBus = (dirTag: string, routeTag: string): string | null => {
+    const busRoute = allRoutes.find(r => r.tag === routeTag);
+    if (!busRoute) return null;
+    
+    const direction = busRoute.directions.find(d => d.tag === dirTag);
+    if (!direction) return null;
+    
+    // Find current stop index in this direction
+    const currentStopIndex = direction.stops.indexOf(stop.tag);
+    if (currentStopIndex === -1 || currentStopIndex >= direction.stops.length - 1) {
+      // Current stop is not in direction or is the last stop
+      return null;
+    }
+    
+    // Get next stop
+    const nextStopTag = direction.stops[currentStopIndex + 1];
+    const nextStop = busRoute.stops.find(s => s.tag === nextStopTag);
+    return nextStop?.title || null;
+  };
+
   const getTimeColor = (minutes: number) => {
     if (minutes <= 1) return 'text-transit-now';
     if (minutes <= 5) return 'text-transit-soon';
     return 'text-foreground';
   };
 
-  const getTimeBg = (minutes: number) => {
+  const getTimeBg = (minutes: number, isFirst: boolean) => {
+    if (isFirst) return 'bg-primary/20 ring-2 ring-primary';
     if (minutes <= 1) return 'bg-transit-now/20';
     if (minutes <= 5) return 'bg-transit-soon/20';
     return 'bg-secondary';
@@ -108,50 +161,65 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
               <span>Loading arrivals...</span>
             </div>
           </div>
-        ) : predictions.length === 0 ? (
+        ) : sortedPredictions.length === 0 ? (
           <div className="text-center py-8">
             <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
             <p className="text-muted-foreground">No upcoming arrivals</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {predictions.map((pred, i) => {
-              const predRoute = allRoutes.find(r => r.tag === pred.routeTag);
-              const color = predRoute?.color === '000000' ? '6B7280' : predRoute?.color || '6B7280';
+          <div className="space-y-2">
+            {sortedPredictions.slice(0, 8).map((item, i) => {
+              const nextStop = getNextStopForBus(item.prediction.dirTag, item.routeTag);
+              const isFirst = i === 0;
               
               return (
-                <div key={`${pred.routeTag}-${i}`} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: `#${color}` }}
-                    />
-                    <span className="text-sm font-medium">{pred.routeTitle}</span>
-                  </div>
-                  
-                  {pred.directions.map((dir, j) => (
-                    <div key={`${dir.title}-${j}`} className="pl-5 space-y-1">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <ChevronRight className="w-3 h-3" />
-                        <span>{dir.title}</span>
+                <div
+                  key={`${item.routeTag}-${item.prediction.vehicle}-${i}`}
+                  className={cn(
+                    "p-3 rounded-xl transition-all",
+                    getTimeBg(item.prediction.minutes, isFirst)
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: `#${item.routeColor}` }}
+                      >
+                        <Bus className="w-5 h-5 text-white" />
                       </div>
-                      
-                      <div className="flex flex-wrap gap-2">
-                        {dir.predictions.slice(0, 4).map((p, k) => (
-                          <div
-                            key={k}
-                            className={cn(
-                              "px-3 py-1.5 rounded-lg text-sm font-medium",
-                              getTimeBg(p.minutes),
-                              getTimeColor(p.minutes)
-                            )}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">
+                            Bus #{item.prediction.vehicle}
+                          </span>
+                          <span 
+                            className="text-xs px-1.5 py-0.5 rounded"
+                            style={{ 
+                              backgroundColor: `#${item.routeColor}30`,
+                              color: `#${item.routeColor}`
+                            }}
                           >
-                            {p.minutes === 0 ? 'NOW' : `${p.minutes} min`}
-                          </div>
-                        ))}
+                            {item.routeTitle}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {nextStop ? `Next: ${nextStop}` : `To: ${item.directionTitle}`}
+                        </p>
                       </div>
                     </div>
-                  ))}
+                    <div className={cn(
+                      "text-right",
+                      getTimeColor(item.prediction.minutes)
+                    )}>
+                      <div className="text-lg font-bold">
+                        {item.prediction.minutes === 0 ? 'NOW' : `${item.prediction.minutes}`}
+                      </div>
+                      {item.prediction.minutes > 0 && (
+                        <div className="text-xs opacity-70">min</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               );
             })}
