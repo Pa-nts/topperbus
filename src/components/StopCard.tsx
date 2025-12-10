@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Stop, Route, StopPredictions, Prediction } from '@/types/transit';
-import { fetchPredictions } from '@/lib/api';
-import { Clock, MapPin, X, RefreshCw, Bus } from 'lucide-react';
+import { Stop, Route, StopPredictions, Prediction, VehicleLocation } from '@/types/transit';
+import { fetchPredictions, fetchVehicleLocations } from '@/lib/api';
+import { Clock, MapPin, X, RefreshCw, Bus, Navigation } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface StopCardProps {
@@ -19,12 +19,26 @@ interface FlatPrediction {
   directionTitle: string;
 }
 
+// Calculate distance between two lat/lon points in meters
+const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371000; // Earth's radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
 const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
   const [predictions, setPredictions] = useState<StopPredictions[]>([]);
+  const [vehicles, setVehicles] = useState<VehicleLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  const fetchAllPredictions = async () => {
+  const fetchAllData = async () => {
     setLoading(true);
     try {
       const routesWithStop = allRoutes.filter(r => 
@@ -37,6 +51,10 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
         allPreds.push(...preds);
       }
       
+      // Fetch vehicle locations
+      const vehicleData = await fetchVehicleLocations();
+      setVehicles(vehicleData);
+      
       setPredictions(allPreds);
       setLastUpdate(new Date());
     } catch (error) {
@@ -47,8 +65,8 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
   };
 
   useEffect(() => {
-    fetchAllPredictions();
-    const interval = setInterval(fetchAllPredictions, 30000);
+    fetchAllData();
+    const interval = setInterval(fetchAllData, 30000);
     return () => clearInterval(interval);
   }, [stop.tag]);
 
@@ -76,25 +94,31 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
     return flat.sort((a, b) => a.prediction.minutes - b.prediction.minutes);
   }, [predictions, allRoutes]);
 
-  // Find the next stop the bus is heading to based on direction
-  const getNextStopForBus = (dirTag: string, routeTag: string): string | null => {
+  // Find the nearest stop to a bus's current location
+  const getNearestStopForBus = (vehicleId: string, routeTag: string): string | null => {
+    const vehicle = vehicles.find(v => v.id === vehicleId && v.routeTag === routeTag);
+    if (!vehicle) return null;
+    
     const busRoute = allRoutes.find(r => r.tag === routeTag);
-    if (!busRoute) return null;
+    if (!busRoute || busRoute.stops.length === 0) return null;
     
-    const direction = busRoute.directions.find(d => d.tag === dirTag);
-    if (!direction) return null;
+    let nearestStop: Stop | null = null;
+    let minDistance = Infinity;
     
-    // Find current stop index in this direction
-    const currentStopIndex = direction.stops.indexOf(stop.tag);
-    if (currentStopIndex === -1 || currentStopIndex >= direction.stops.length - 1) {
-      // Current stop is not in direction or is the last stop
-      return null;
+    for (const routeStop of busRoute.stops) {
+      const distance = getDistance(vehicle.lat, vehicle.lon, routeStop.lat, routeStop.lon);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestStop = routeStop;
+      }
     }
     
-    // Get next stop
-    const nextStopTag = direction.stops[currentStopIndex + 1];
-    const nextStop = busRoute.stops.find(s => s.tag === nextStopTag);
-    return nextStop?.title || null;
+    // Only return if within 500 meters of a stop
+    if (nearestStop && minDistance < 500) {
+      return nearestStop.title;
+    }
+    
+    return null;
   };
 
   const getTimeColor = (minutes: number) => {
@@ -143,7 +167,7 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
             <span>{stop.lat.toFixed(5)}, {stop.lon.toFixed(5)}</span>
           </div>
           <button
-            onClick={fetchAllPredictions}
+            onClick={fetchAllData}
             className="flex items-center gap-1 hover:text-foreground transition-colors"
           >
             <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
@@ -169,7 +193,7 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
         ) : (
           <div className="space-y-2">
             {sortedPredictions.slice(0, 8).map((item, i) => {
-              const nextStop = getNextStopForBus(item.prediction.dirTag, item.routeTag);
+              const nearestStop = getNearestStopForBus(item.prediction.vehicle, item.routeTag);
               const isFirst = i === 0;
               
               return (
@@ -203,8 +227,9 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
                             {item.routeTitle}
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {nextStop ? `Next: ${nextStop}` : `To: ${item.directionTitle}`}
+                        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <Navigation className="w-3 h-3" />
+                          {nearestStop ? `At: ${nearestStop}` : `Heading to: ${item.directionTitle}`}
                         </p>
                       </div>
                     </div>
