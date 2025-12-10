@@ -182,14 +182,18 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
     return 'bg-secondary';
   };
 
+  const hasMorePredictions = sortedPredictions.length > 4;
+
   return (
     <Drawer 
       open={isOpen && !isClosing} 
       onOpenChange={handleOpenChange}
       direction="top"
       modal={false}
+      snapPoints={hasMorePredictions ? [0.45, 0.75] : [0.45]}
+      activeSnapPoint={hasMorePredictions ? 0.45 : undefined}
     >
-      <DrawerContent className="top-0 bottom-auto mt-0 rounded-t-none rounded-b-2xl max-h-[70vh] flex flex-col">
+      <DrawerContent className="top-0 bottom-auto mt-0 rounded-t-none rounded-b-2xl flex flex-col">
         {/* Header */}
         <DrawerHeader className="p-4 border-b border-border flex-shrink-0">
           <div className="flex items-start justify-between">
