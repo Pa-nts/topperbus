@@ -1,16 +1,17 @@
 import { Route, Stop } from '@/types/transit';
 import { MapPin, Search } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 
 interface StopListProps {
   routes: Route[];
   selectedRoute: string | null;
   onStopSelect: (stop: Stop, route: Route) => void;
+  search: string;
+  onSearchChange: (search: string) => void;
 }
 
-const StopList = ({ routes, selectedRoute, onStopSelect }: StopListProps) => {
-  const [search, setSearch] = useState('');
+const StopList = ({ routes, selectedRoute, onStopSelect, search, onSearchChange }: StopListProps) => {
 
   const filteredStops = useMemo(() => {
     const displayedRoutes = selectedRoute 
@@ -52,7 +53,7 @@ const StopList = ({ routes, selectedRoute, onStopSelect }: StopListProps) => {
             type="text"
             placeholder="Search stops..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-secondary text-foreground rounded-lg border-0 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
