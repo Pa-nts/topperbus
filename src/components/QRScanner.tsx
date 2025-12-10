@@ -12,6 +12,7 @@ interface QRScannerProps {
 
 const QRScanner = ({ onScan, onClose, routes }: QRScannerProps) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const isRunningRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(true);
   const [invalidCode, setInvalidCode] = useState<string | null>(null);
@@ -56,19 +57,24 @@ const QRScanner = ({ onScan, onClose, routes }: QRScannerProps) => {
             
             if (stopId && isValidStop(stopId)) {
               // Valid stop - proceed
-              onScan(stopId);
-            } else {
-              // Invalid QR code
-              setInvalidCode(decodedText);
-              // Stop scanning when invalid code detected
-              if (scannerRef.current) {
+              if (scannerRef.current && isRunningRef.current) {
+                isRunningRef.current = false;
                 scannerRef.current.stop().catch(() => {});
               }
+              onScan(stopId);
+            } else {
+              // Invalid QR code - stop scanning
+              if (scannerRef.current && isRunningRef.current) {
+                isRunningRef.current = false;
+                scannerRef.current.stop().catch(() => {});
+              }
+              setInvalidCode(decodedText);
             }
           },
           () => {} // Ignore errors during scanning
         );
         
+        isRunningRef.current = true;
         setIsStarting(false);
       } catch (err) {
         console.error('Scanner error:', err);
@@ -80,7 +86,8 @@ const QRScanner = ({ onScan, onClose, routes }: QRScannerProps) => {
     startScanner();
 
     return () => {
-      if (scannerRef.current) {
+      if (scannerRef.current && isRunningRef.current) {
+        isRunningRef.current = false;
         scannerRef.current.stop().catch(() => {});
       }
     };
@@ -105,17 +112,23 @@ const QRScanner = ({ onScan, onClose, routes }: QRScannerProps) => {
           const stopId = extractStopId(decodedText);
           
           if (stopId && isValidStop(stopId)) {
-            onScan(stopId);
-          } else {
-            setInvalidCode(decodedText);
-            if (scannerRef.current) {
+            if (scannerRef.current && isRunningRef.current) {
+              isRunningRef.current = false;
               scannerRef.current.stop().catch(() => {});
             }
+            onScan(stopId);
+          } else {
+            if (scannerRef.current && isRunningRef.current) {
+              isRunningRef.current = false;
+              scannerRef.current.stop().catch(() => {});
+            }
+            setInvalidCode(decodedText);
           }
         },
         () => {}
       );
       
+      isRunningRef.current = true;
       setIsStarting(false);
     } catch (err) {
       setError('Failed to restart scanner');
