@@ -250,17 +250,22 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, is
     if (!markersRef.current) return;
     markersRef.current.clearLayers();
 
-    // Collect stops with ALL their routes
-    const stopsMap = new Map<string, { stop: Stop; routes: Route[] }>();
+    // Collect stops with ALL their routes - group by location to merge overlapping stops
+    const stopsMap = new Map<string, { stop: Stop; routes: Route[]; tags: string[] }>();
     displayedRoutes.forEach(route => {
       route.stops.forEach(stop => {
-        const existing = stopsMap.get(stop.tag);
+        // Use lat/lon as key to merge stops at the same location
+        const locationKey = `${stop.lat.toFixed(5)},${stop.lon.toFixed(5)}`;
+        const existing = stopsMap.get(locationKey);
         if (existing) {
           if (!existing.routes.find(r => r.tag === route.tag)) {
             existing.routes.push(route);
           }
+          if (!existing.tags.includes(stop.tag)) {
+            existing.tags.push(stop.tag);
+          }
         } else {
-          stopsMap.set(stop.tag, { stop, routes: [route] });
+          stopsMap.set(locationKey, { stop, routes: [route], tags: [stop.tag] });
         }
       });
     });
