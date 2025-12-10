@@ -254,8 +254,8 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, is
     const stopsMap = new Map<string, { stop: Stop; routes: Route[]; tags: string[] }>();
     displayedRoutes.forEach(route => {
       route.stops.forEach(stop => {
-        // Use lat/lon as key to merge stops at the same location
-        const locationKey = `${stop.lat.toFixed(5)},${stop.lon.toFixed(5)}`;
+        // Use lat/lon as key to merge stops at the same location (rounded to ~11m precision)
+        const locationKey = `${stop.lat.toFixed(4)},${stop.lon.toFixed(4)}`;
         const existing = stopsMap.get(locationKey);
         if (existing) {
           if (!existing.routes.find(r => r.tag === route.tag)) {
