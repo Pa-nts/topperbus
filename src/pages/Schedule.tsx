@@ -13,30 +13,6 @@ interface BusJourneyStop {
   isCurrent: boolean;
 }
 
-// Route operating hours (in 24-hour format)
-const ROUTE_SCHEDULES: Record<string, { startHour: number; startMin: number; endHour: number; endMin: number }> = {
-  'red': { startHour: 7, startMin: 30, endHour: 17, endMin: 30 },   // Campus Circulator: 7:30 AM - 5:30 PM
-  'white': { startHour: 7, startMin: 15, endHour: 17, endMin: 24 }, // South Campus: 7:15 AM - 5:24 PM
-  'blue': { startHour: 7, startMin: 20, endHour: 17, endMin: 30 },  // Kentucky Street: 7:20 AM - 5:30 PM
-};
-
-const isRouteInService = (routeTag: string): boolean => {
-  const now = new Date();
-  const day = now.getDay(); // 0 = Sunday, 6 = Saturday
-  
-  // No service on weekends
-  if (day === 0 || day === 6) return false;
-  
-  const schedule = ROUTE_SCHEDULES[routeTag];
-  if (!schedule) return true; // Default to showing if unknown route
-  
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const startMinutes = schedule.startHour * 60 + schedule.startMin;
-  const endMinutes = schedule.endHour * 60 + schedule.endMin;
-  
-  return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-};
-
 const Schedule = () => {
   const [routes, setRoutes] = useState<Route[]>([]);
   const [vehicles, setVehicles] = useState<VehicleLocation[]>([]);
@@ -298,12 +274,7 @@ const Schedule = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {!isRouteInService(route.tag) ? (
-                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-400 text-sm">
-                      <Clock className="w-4 h-4" />
-                      Outside Hours
-                    </span>
-                  ) : routeVehicles.length > 0 ? (
+                  {routeVehicles.length > 0 ? (
                     <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/20 text-green-400 text-sm">
                       <CheckCircle className="w-4 h-4" />
                       {routeVehicles.length} Active
@@ -407,8 +378,8 @@ const Schedule = () => {
                 );
               })()}
 
-              {/* Active buses - only show if route is in service */}
-              {isRouteInService(route.tag) && routeVehicles.length > 0 && (
+              {/* Active buses - NOW AT TOP */}
+              {routeVehicles.length > 0 && (
                 <div className="border-b border-border p-4 space-y-4">
                   <h3 className="text-sm font-medium flex items-center gap-2">
                     <Bus className="w-4 h-4" />

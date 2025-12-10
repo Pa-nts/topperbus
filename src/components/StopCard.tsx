@@ -32,30 +32,6 @@ const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * c;
 };
 
-// Route operating hours (in 24-hour format, Central Time)
-const ROUTE_SCHEDULES: Record<string, { startHour: number; startMin: number; endHour: number; endMin: number }> = {
-  'red': { startHour: 7, startMin: 30, endHour: 17, endMin: 30 },   // Campus Circulator: 7:30 AM - 5:30 PM
-  'white': { startHour: 7, startMin: 15, endHour: 17, endMin: 24 }, // South Campus: 7:15 AM - 5:24 PM
-  'blue': { startHour: 7, startMin: 20, endHour: 17, endMin: 30 },  // Kentucky Street: 7:20 AM - 5:30 PM
-};
-
-const isRouteInService = (routeTag: string): boolean => {
-  const now = new Date();
-  const day = now.getDay(); // 0 = Sunday, 6 = Saturday
-  
-  // No service on weekends
-  if (day === 0 || day === 6) return false;
-  
-  const schedule = ROUTE_SCHEDULES[routeTag];
-  if (!schedule) return true; // Default to showing if unknown route
-  
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const startMinutes = schedule.startHour * 60 + schedule.startMin;
-  const endMinutes = schedule.endHour * 60 + schedule.endMin;
-  
-  return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-};
-
 const MIN_HEIGHT = 45; // percentage
 const MAX_HEIGHT = 75; // percentage
 
@@ -164,23 +140,11 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
     setTimeout(onClose, 200);
   };
 
-  // Check which routes at this stop are currently in service
-  const routesInService = useMemo(() => {
-    return routesAtStop.filter(r => isRouteInService(r.tag));
-  }, [routesAtStop]);
-
-  const routesOutOfService = useMemo(() => {
-    return routesAtStop.filter(r => !isRouteInService(r.tag));
-  }, [routesAtStop]);
-
-  // Flatten and sort all predictions by time (only from routes in service)
+  // Flatten and sort all predictions by time
   const sortedPredictions = useMemo(() => {
     const flat: FlatPrediction[] = [];
     
     predictions.forEach(pred => {
-      // Skip predictions from routes not in service
-      if (!isRouteInService(pred.routeTag)) return;
-      
       if (selectedRouteFilter && pred.routeTag !== selectedRouteFilter) return;
       
       const predRoute = allRoutes.find(r => r.tag === pred.routeTag);
@@ -340,8 +304,8 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
             </button>
           </div>
           
-          {/* Route filter - only show routes in service */}
-          {routesInService.length > 1 && (
+          {/* Route filter */}
+          {routesAtStop.length > 1 && (
             <div className="flex flex-wrap gap-1.5 mt-3">
               <button
                 onClick={() => setSelectedRouteFilter(null)}
@@ -354,7 +318,7 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
               >
                 All Routes
               </button>
-              {routesInService.map(r => {
+              {routesAtStop.map(r => {
                 const color = r.color === '000000' ? '6B7280' : r.color;
                 const isSelected = selectedRouteFilter === r.tag;
                 return (
@@ -392,37 +356,9 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
               </div>
             </div>
           ) : sortedPredictions.length === 0 ? (
-            <div className="text-center py-6">
+            <div className="text-center py-8">
               <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground mb-3">No upcoming arrivals</p>
-              
-              {/* Show routes that are out of service */}
-              {routesOutOfService.length > 0 && (
-                <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-left">
-                  <p className="text-xs text-amber-200/90 mb-2 font-medium">Routes not currently in service:</p>
-                  {routesOutOfService.map(r => {
-                    const schedule = ROUTE_SCHEDULES[r.tag];
-                    const color = r.color === '000000' ? '6B7280' : r.color;
-                    return (
-                      <div key={r.tag} className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                        <span 
-                          className="w-2 h-2 rounded-full" 
-                          style={{ backgroundColor: `#${color}` }} 
-                        />
-                        <span>{r.title}</span>
-                        {schedule && (
-                          <span className="text-amber-400/80">
-                            ({schedule.startHour > 12 ? schedule.startHour - 12 : schedule.startHour}:{schedule.startMin.toString().padStart(2, '0')} {schedule.startHour >= 12 ? 'PM' : 'AM'} - {schedule.endHour > 12 ? schedule.endHour - 12 : schedule.endHour}:{schedule.endMin.toString().padStart(2, '0')} PM)
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Service runs Mon-Fri during Fall & Spring semesters
-                  </p>
-                </div>
-              )}
+              <p className="text-muted-foreground">No upcoming arrivals</p>
             </div>
           ) : (
             <div className="space-y-2">
