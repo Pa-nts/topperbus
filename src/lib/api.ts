@@ -95,6 +95,7 @@ export async function fetchVehicleLocations(routeTag?: string): Promise<VehicleL
     vehicles.push({
       id: vehicleEl.getAttribute('id') || '',
       routeTag: vehicleEl.getAttribute('routeTag') || '',
+      dirTag: vehicleEl.getAttribute('dirTag') || '',
       lat: parseFloat(vehicleEl.getAttribute('lat') || '0'),
       lon: parseFloat(vehicleEl.getAttribute('lon') || '0'),
       heading: parseFloat(vehicleEl.getAttribute('heading') || '0'),
