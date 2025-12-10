@@ -173,49 +173,74 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, is
     });
   }, [displayedRoutes, selectedRoute]);
 
-  // Helper to create SVG for multi-route stop marker
+  // Helper to create SVG for bus stop sign marker
   const createStopMarkerSvg = (colors: string[], isSelected: boolean): string => {
-    const size = isSelected ? 24 : 18;
-    const radius = (size / 2) - 2;
-    const centerX = size / 2;
-    const centerY = size / 2;
+    const width = isSelected ? 28 : 22;
+    const height = isSelected ? 36 : 28;
+    const signWidth = width - 4;
+    const signHeight = height - 10;
+    const signX = 2;
+    const signY = 2;
+    const poleWidth = 4;
+    const poleX = (width - poleWidth) / 2;
+    const cornerRadius = 3;
+    
+    // Bus icon path (simplified)
+    const busIconScale = isSelected ? 0.5 : 0.4;
+    const busIconX = width / 2;
+    const busIconY = signY + signHeight / 2;
     
     if (colors.length === 1) {
-      // Single route - simple circle with inner dot
+      // Single route - solid color sign
       return `
-        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-          <circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="#${colors[0]}" stroke="${isSelected ? '#ffffff' : '#1a1f2e'}" stroke-width="2"/>
-          <circle cx="${centerX}" cy="${centerY}" r="${radius * 0.4}" fill="${isSelected ? '#ffffff' : '#1a1f2e'}"/>
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+          <!-- Pole -->
+          <rect x="${poleX}" y="${signY + signHeight - 2}" width="${poleWidth}" height="${height - signHeight}" fill="${isSelected ? '#ffffff' : '#1a1f2e'}" rx="1"/>
+          <!-- Sign background/border -->
+          <rect x="${signX - 1}" y="${signY - 1}" width="${signWidth + 2}" height="${signHeight + 2}" rx="${cornerRadius + 1}" fill="${isSelected ? '#ffffff' : '#1a1f2e'}"/>
+          <!-- Sign -->
+          <rect x="${signX}" y="${signY}" width="${signWidth}" height="${signHeight}" rx="${cornerRadius}" fill="#${colors[0]}"/>
+          <!-- Bus icon -->
+          <g transform="translate(${busIconX}, ${busIconY}) scale(${busIconScale})">
+            <path d="M-8 4c0 .88.39 1.67 1 2.22V8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1V6.22c.61-.55 1-1.34 1-2.22V-6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S-5.33 2-4.5 2 -3 2.67-3 3.5-3.67 5-4.5 5zm9 0c-.83 0-1.5-.67-1.5-1.5S3.67 2 4.5 2 6 2.67 6 3.5 5.33 5 4.5 5zm1.5-6H-6V-6h12v5z" fill="white"/>
+          </g>
         </svg>
       `;
     }
     
-    // Multiple routes - pie segments
-    const segmentAngle = 360 / colors.length;
+    // Multiple routes - split sign with gradient/segments
+    const segmentWidth = signWidth / colors.length;
     let segments = '';
     
     colors.forEach((color, index) => {
-      const startAngle = index * segmentAngle - 90;
-      const endAngle = startAngle + segmentAngle;
+      const x = signX + (index * segmentWidth);
+      const isFirst = index === 0;
+      const isLast = index === colors.length - 1;
       
-      const startRad = (startAngle * Math.PI) / 180;
-      const endRad = (endAngle * Math.PI) / 180;
-      
-      const x1 = centerX + radius * Math.cos(startRad);
-      const y1 = centerY + radius * Math.sin(startRad);
-      const x2 = centerX + radius * Math.cos(endRad);
-      const y2 = centerY + radius * Math.sin(endRad);
-      
-      const largeArc = segmentAngle > 180 ? 1 : 0;
-      
-      segments += `<path d="M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z" fill="#${color}"/>`;
+      if (isFirst) {
+        // First segment with left rounded corners
+        segments += `<path d="M ${x + cornerRadius} ${signY} H ${x + segmentWidth} V ${signY + signHeight} H ${x + cornerRadius} Q ${x} ${signY + signHeight} ${x} ${signY + signHeight - cornerRadius} V ${signY + cornerRadius} Q ${x} ${signY} ${x + cornerRadius} ${signY}" fill="#${color}"/>`;
+      } else if (isLast) {
+        // Last segment with right rounded corners
+        segments += `<path d="M ${x} ${signY} H ${x + segmentWidth - cornerRadius} Q ${x + segmentWidth} ${signY} ${x + segmentWidth} ${signY + cornerRadius} V ${signY + signHeight - cornerRadius} Q ${x + segmentWidth} ${signY + signHeight} ${x + segmentWidth - cornerRadius} ${signY + signHeight} H ${x} V ${signY}" fill="#${color}"/>`;
+      } else {
+        // Middle segments - just rectangles
+        segments += `<rect x="${x}" y="${signY}" width="${segmentWidth}" height="${signHeight}" fill="#${color}"/>`;
+      }
     });
     
     return `
-      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-        <circle cx="${centerX}" cy="${centerY}" r="${radius + 1}" fill="${isSelected ? '#ffffff' : '#1a1f2e'}"/>
+      <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+        <!-- Pole -->
+        <rect x="${poleX}" y="${signY + signHeight - 2}" width="${poleWidth}" height="${height - signHeight}" fill="${isSelected ? '#ffffff' : '#1a1f2e'}" rx="1"/>
+        <!-- Sign background/border -->
+        <rect x="${signX - 1}" y="${signY - 1}" width="${signWidth + 2}" height="${signHeight + 2}" rx="${cornerRadius + 1}" fill="${isSelected ? '#ffffff' : '#1a1f2e'}"/>
+        <!-- Color segments -->
         ${segments}
-        <circle cx="${centerX}" cy="${centerY}" r="${radius * 0.35}" fill="${isSelected ? '#ffffff' : '#1a1f2e'}"/>
+        <!-- Bus icon -->
+        <g transform="translate(${busIconX}, ${busIconY}) scale(${busIconScale})">
+          <path d="M-8 4c0 .88.39 1.67 1 2.22V8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1V6.22c.61-.55 1-1.34 1-2.22V-6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S-5.33 2-4.5 2 -3 2.67-3 3.5-3.67 5-4.5 5zm9 0c-.83 0-1.5-.67-1.5-1.5S3.67 2 4.5 2 6 2.67 6 3.5 5.33 5 4.5 5zm1.5-6H-6V-6h12v5z" fill="white"/>
+        </g>
       </svg>
     `;
   };
@@ -243,22 +268,23 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, is
     stopsMap.forEach(({ stop, routes: stopRoutes }) => {
       const isSelected = selectedStop?.tag === stop.tag;
       const colors = stopRoutes.map(r => r.color === '000000' ? '6B7280' : r.color);
-      const size = isSelected ? 24 : 18;
+      const width = isSelected ? 28 : 22;
+      const height = isSelected ? 36 : 28;
       
       const icon = L.divIcon({
         className: 'custom-stop-marker',
         html: `
           <div style="
-            width: ${size}px;
-            height: ${size}px;
+            width: ${width}px;
+            height: ${height}px;
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
             transition: all 0.2s ease;
           ">
             ${createStopMarkerSvg(colors, isSelected)}
           </div>
         `,
-        iconSize: [size, size],
-        iconAnchor: [size / 2, size / 2],
+        iconSize: [width, height],
+        iconAnchor: [width / 2, height],
       });
 
       const routesList = stopRoutes.map(r => `<span style="color: #${r.color === '000000' ? '6B7280' : r.color};">●</span> ${r.title}`).join('<br/>');
