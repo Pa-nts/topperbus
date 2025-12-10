@@ -6,71 +6,72 @@
 
 @layer base {
   :root {
-    --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
+    /* WKU Colors: Red #C60C30, White #FFFFFF, Black #000000, Gray #333333 */
+    --background: 0 0% 7%;
+    --foreground: 0 0% 98%;
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 142 76% 45%;
-    --primary-foreground: 222 47% 8%;
+    --primary: 348 89% 41%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 222 40% 18%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 222 40% 15%;
-    --muted-foreground: 215 20% 60%;
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 200 100% 50%;
-    --accent-foreground: 222 47% 8%;
+    --accent: 348 70% 50%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 222 40% 20%;
-    --input: 222 40% 20%;
-    --ring: 142 76% 45%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 348 89% 41%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 142 76% 45%;
-    --sidebar-primary-foreground: 222 47% 8%;
-    --sidebar-accent: 222 40% 18%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 40% 20%;
-    --sidebar-ring: 142 76% 45%;
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 348 89% 41%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 348 89% 41%;
 
     /* Transit specific */
-    --route-active: 142 76% 45%;
+    --route-active: 348 89% 41%;
     --arrival-soon: 38 92% 50%;
-    --arrival-now: 142 76% 45%;
+    --arrival-now: 120 60% 45%;
   }
 
   .dark {
-    --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 142 76% 45%;
-    --primary-foreground: 222 47% 8%;
-    --secondary: 222 40% 18%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 222 40% 15%;
-    --muted-foreground: 215 20% 60%;
-    --accent: 200 100% 50%;
-    --accent-foreground: 222 47% 8%;
+    --background: 0 0% 7%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 348 89% 41%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 348 70% 50%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 222 40% 20%;
-    --input: 222 40% 20%;
-    --ring: 142 76% 45%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 348 89% 41%;
   }
 }
 
@@ -87,23 +88,23 @@
 
 /* Leaflet overrides for dark theme */
 .leaflet-container {
-  background: hsl(222 47% 8%);
+  background: hsl(0 0% 7%);
   font-family: 'Outfit', sans-serif;
 }
 
 .leaflet-popup-content-wrapper {
-  background: hsl(222 47% 11%);
-  color: hsl(210 40% 98%);
+  background: hsl(0 0% 10%);
+  color: hsl(0 0% 98%);
   border-radius: 0.75rem;
   box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
 }
 
 .leaflet-popup-tip {
-  background: hsl(222 47% 11%);
+  background: hsl(0 0% 10%);
 }
 
 .leaflet-popup-close-button {
-  color: hsl(215 20% 60%) !important;
+  color: hsl(0 0% 60%) !important;
 }
 
 /* Custom scrollbar */
@@ -112,16 +113,16 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(222 47% 8%);
+  background: hsl(0 0% 7%);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(222 40% 25%);
+  background: hsl(0 0% 25%);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(222 40% 30%);
+  background: hsl(0 0% 30%);
 }
 
 /* Animations */
