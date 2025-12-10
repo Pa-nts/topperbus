@@ -288,6 +288,35 @@ const Schedule = () => {
                 </div>
               </div>
 
+              {/* Operating Hours */}
+              <div className="border-t border-border p-4 bg-secondary/20">
+                <h3 className="text-sm font-medium flex items-center gap-2 mb-3">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  Operating Hours
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-lg bg-card p-3 border border-border">
+                    <p className="text-xs text-muted-foreground mb-1">First Bus</p>
+                    <p className="font-semibold text-green-400">7:00 AM</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {route.directions[0]?.stops[0] && 
+                        route.stops.find(s => s.tag === route.directions[0].stops[0])?.title || 'Starting point'}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-card p-3 border border-border">
+                    <p className="text-xs text-muted-foreground mb-1">Last Bus</p>
+                    <p className="font-semibold text-amber-400">10:00 PM</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {route.directions[0]?.stops[route.directions[0].stops.length - 1] && 
+                        route.stops.find(s => s.tag === route.directions[0].stops[route.directions[0].stops.length - 1])?.title || 'End point'}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3 text-center">
+                  Monday - Friday • No service on weekends & holidays
+                </p>
+              </div>
+
               {/* Active buses - NOW AT TOP */}
               {routeVehicles.length > 0 && (
                 <div className="border-b border-border p-4 space-y-4">

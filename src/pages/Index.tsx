@@ -188,13 +188,26 @@ const Index = () => {
             onSelectRoute={setSelectedRoute}
           />
           
-          {/* Kentucky Street Route Warning */}
-          <div className="mt-3 flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-            <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-200/90">
-              <span className="font-medium">Note:</span> Kentucky Street route data is currently not being updated by the transit system. Live tracking may be unavailable.
-            </p>
-          </div>
+          {/* Dynamic route warning for routes with no active buses */}
+          {(() => {
+            const inactiveRoutes = routes.filter(r => 
+              !vehicles.some(v => v.routeTag === r.tag)
+            );
+            if (inactiveRoutes.length === 0) return null;
+            
+            return (
+              <div className="mt-3 flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-200/90">
+                  <span className="font-medium">Note:</span>{' '}
+                  {inactiveRoutes.length === 1 
+                    ? `${inactiveRoutes[0].title} data is currently not being updated by the transit system.`
+                    : `${inactiveRoutes.map(r => r.title.replace('Route ', '')).join(', ')} routes data is currently not being updated.`
+                  } Live tracking may be unavailable.
+                </p>
+              </div>
+            );
+          })()}
         </div>
       </header>
 
