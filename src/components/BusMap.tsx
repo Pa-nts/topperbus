@@ -190,16 +190,20 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, is
     const busIconX = width / 2;
     const busIconY = signY + signHeight / 2;
     
+    // Selected state uses green glow effect
+    const poleColor = isSelected ? '#22c55e' : '#1a1f2e';
+    const borderColor = isSelected ? '#22c55e' : '#1a1f2e';
+    
     if (colors.length === 1) {
       // Single route - solid color sign
       return `
         <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
           <!-- Pole -->
-          <rect x="${poleX}" y="${signY + signHeight - 2}" width="${poleWidth}" height="${height - signHeight}" fill="${isSelected ? '#ffffff' : '#1a1f2e'}" rx="1"/>
+          <rect x="${poleX}" y="${signY + signHeight - 2}" width="${poleWidth}" height="${height - signHeight}" fill="${poleColor}" rx="1"/>
           <!-- Sign background/border -->
-          <rect x="${signX - 1}" y="${signY - 1}" width="${signWidth + 2}" height="${signHeight + 2}" rx="${cornerRadius + 1}" fill="${isSelected ? '#ffffff' : '#1a1f2e'}"/>
+          <rect x="${signX - 1}" y="${signY - 1}" width="${signWidth + 2}" height="${signHeight + 2}" rx="${cornerRadius + 1}" fill="${borderColor}"/>
           <!-- Sign -->
-          <rect x="${signX}" y="${signY}" width="${signWidth}" height="${signHeight}" rx="${cornerRadius}" fill="#${colors[0]}"/>
+          <rect x="${signX}" y="${signY}" width="${signWidth}" height="${signHeight}" rx="${cornerRadius}" fill="#${colors[0]}" ${isSelected ? 'opacity="0.85"' : ''}/>
           <!-- Bus icon -->
           <g transform="translate(${busIconX}, ${busIconY}) scale(${busIconScale})">
             <path d="M-8 4c0 .88.39 1.67 1 2.22V8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1V6.22c.61-.55 1-1.34 1-2.22V-6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S-5.33 2-4.5 2 -3 2.67-3 3.5-3.67 5-4.5 5zm9 0c-.83 0-1.5-.67-1.5-1.5S3.67 2 4.5 2 6 2.67 6 3.5 5.33 5 4.5 5zm1.5-6H-6V-6h12v5z" fill="white"/>
@@ -229,12 +233,16 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, is
       }
     });
     
+    // Selected state uses green glow effect for multi-route
+    const multiPoleColor = isSelected ? '#22c55e' : '#1a1f2e';
+    const multiBorderColor = isSelected ? '#22c55e' : '#1a1f2e';
+    
     return `
       <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
         <!-- Pole -->
-        <rect x="${poleX}" y="${signY + signHeight - 2}" width="${poleWidth}" height="${height - signHeight}" fill="${isSelected ? '#ffffff' : '#1a1f2e'}" rx="1"/>
+        <rect x="${poleX}" y="${signY + signHeight - 2}" width="${poleWidth}" height="${height - signHeight}" fill="${multiPoleColor}" rx="1"/>
         <!-- Sign background/border -->
-        <rect x="${signX - 1}" y="${signY - 1}" width="${signWidth + 2}" height="${signHeight + 2}" rx="${cornerRadius + 1}" fill="${isSelected ? '#ffffff' : '#1a1f2e'}"/>
+        <rect x="${signX - 1}" y="${signY - 1}" width="${signWidth + 2}" height="${signHeight + 2}" rx="${cornerRadius + 1}" fill="${multiBorderColor}"/>
         <!-- Color segments -->
         ${segments}
         <!-- Bus icon -->
@@ -282,8 +290,9 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, is
           <div style="
             width: ${width}px;
             height: ${height}px;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) ${isSelected ? 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.8))' : ''};
             transition: all 0.2s ease;
+            ${isSelected ? 'transform: scale(1.1);' : ''}
           ">
             ${createStopMarkerSvg(colors, isSelected)}
           </div>

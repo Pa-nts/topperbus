@@ -165,7 +165,7 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
   };
 
   const getTimeBg = (minutes: number, isFirst: boolean) => {
-    if (isFirst) return 'bg-primary/20 ring-2 ring-primary';
+    if (isFirst) return 'bg-green-500/20 ring-2 ring-green-500';
     if (minutes <= 1) return 'bg-transit-now/20';
     if (minutes <= 5) return 'bg-transit-soon/20';
     return 'bg-secondary';
@@ -173,10 +173,10 @@ const StopCard = ({ stop, route, allRoutes, onClose, isClosing = false }: StopCa
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - no blur to keep map visible */}
       <div 
         className={cn(
-          "fixed inset-0 bg-background/60 backdrop-blur-sm z-[999]",
+          "fixed inset-0 bg-background/40 z-[999]",
           isClosing ? "animate-fade-out" : "animate-fade-in"
         )}
         onClick={onClose}
