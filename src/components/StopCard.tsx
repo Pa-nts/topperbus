@@ -153,10 +153,22 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span
-                className="w-3 h-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: `#${route.color === '000000' ? '6B7280' : route.color}` }}
-              />
+              <div className="flex -space-x-1">
+                {routesAtStop.length > 0 ? (
+                  routesAtStop.map(r => (
+                    <span
+                      key={r.tag}
+                      className="w-3 h-3 rounded-full flex-shrink-0 ring-1 ring-card"
+                      style={{ backgroundColor: `#${r.color === '000000' ? '6B7280' : r.color}` }}
+                    />
+                  ))
+                ) : (
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: `#${route.color === '000000' ? '6B7280' : route.color}` }}
+                  />
+                )}
+              </div>
               <span className="text-xs text-muted-foreground font-medium">
                 Stop {stop.stopId}
               </span>
