@@ -202,7 +202,7 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
     return flat.sort((a, b) => a.prediction.minutes - b.prediction.minutes);
   }, [predictions, allRoutes, selectedRouteFilter]);
 
-  const hasMorePredictions = sortedPredictions.length > 4;
+  
 
   const getNearestStopForBus = (vehicleId: string, routeTag: string): string | null => {
     const vehicle = vehicles.find(v => v.id === vehicleId && v.routeTag === routeTag);
@@ -494,16 +494,14 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
           )}
         </div>
         
-        {/* Drag handle */}
-        {hasMorePredictions && (
-          <div 
-            className="flex-shrink-0 py-3 flex justify-center cursor-grab active:cursor-grabbing touch-none select-none"
-            onMouseDown={handleDragStart}
-            onTouchStart={handleDragStart}
-          >
-            <div className="w-12 h-1.5 rounded-full bg-muted-foreground/40" />
-          </div>
-        )}
+        {/* Drag handle - always visible for resizing */}
+        <div 
+          className="flex-shrink-0 py-3 flex justify-center cursor-grab active:cursor-grabbing touch-none select-none"
+          onMouseDown={handleDragStart}
+          onTouchStart={handleDragStart}
+        >
+          <div className="w-12 h-1.5 rounded-full bg-muted-foreground/40" />
+        </div>
       </div>
     </>
   );
