@@ -26,10 +26,10 @@ export async function fetchRouteConfig(): Promise<Route[]> {
       stops.push({
         tag: stopEl.getAttribute('tag') || '',
         title: stopEl.getAttribute('title') || '',
-        shortTitle: stopEl.getAttribute('shorttitle') || undefined,
+        shortTitle: stopEl.getAttribute('shortTitle') || undefined,
         lat: parseFloat(stopEl.getAttribute('lat') || '0'),
         lon: parseFloat(stopEl.getAttribute('lon') || '0'),
-        stopId: stopEl.getAttribute('stopid') || '',
+        stopId: stopEl.getAttribute('stopId') || '',
       });
     });
     
@@ -44,7 +44,7 @@ export async function fetchRouteConfig(): Promise<Route[]> {
         tag: dirEl.getAttribute('tag') || '',
         title: dirEl.getAttribute('title') || '',
         name: dirEl.getAttribute('name') || '',
-        useForUI: dirEl.getAttribute('useforui') === 'true',
+        useForUI: dirEl.getAttribute('useForUI') === 'true',
         stops: dirStops,
       });
     });
@@ -67,11 +67,11 @@ export async function fetchRouteConfig(): Promise<Route[]> {
       tag: routeEl.getAttribute('tag') || '',
       title: routeEl.getAttribute('title') || '',
       color: routeEl.getAttribute('color') || '000000',
-      oppositeColor: routeEl.getAttribute('oppositecolor') || 'ffffff',
-      latMin: parseFloat(routeEl.getAttribute('latmin') || '0'),
-      latMax: parseFloat(routeEl.getAttribute('latmax') || '0'),
-      lonMin: parseFloat(routeEl.getAttribute('lonmin') || '0'),
-      lonMax: parseFloat(routeEl.getAttribute('lonmax') || '0'),
+      oppositeColor: routeEl.getAttribute('oppositeColor') || 'ffffff',
+      latMin: parseFloat(routeEl.getAttribute('latMin') || '0'),
+      latMax: parseFloat(routeEl.getAttribute('latMax') || '0'),
+      lonMin: parseFloat(routeEl.getAttribute('lonMin') || '0'),
+      lonMax: parseFloat(routeEl.getAttribute('lonMax') || '0'),
       stops,
       directions,
       paths,
