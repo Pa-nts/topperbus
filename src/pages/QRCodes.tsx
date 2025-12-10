@@ -197,16 +197,21 @@ const QRCodes = () => {
                   </div>
                 ))}
               </div>
-              <div className="text-center mb-3 px-2">
-                <p className="text-xs font-medium text-foreground mb-1">
-                  Scan QR code or visit:
+              <div className="text-center mb-3 px-3">
+                <p className="text-lg font-bold text-foreground mb-2">
+                  {stop.title}
                 </p>
-                <p className="text-sm font-semibold text-primary">
-                  topperbus.lovable.app
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Click "Stops" and search for this stop
-                </p>
+                <div className="border-t border-border pt-2 mt-2">
+                  <p className="text-base font-medium text-foreground mb-1">
+                    Scan QR code or visit:
+                  </p>
+                  <p className="text-lg font-bold text-primary">
+                    topperbus.lovable.app
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Click "Stops" and search for "{stop.title}"
+                  </p>
+                </div>
               </div>
               <Button 
                 variant="ghost" 
