@@ -38,12 +38,19 @@ const calculateMinHeight = (infoCount: number): number => {
 
 const BusCard = ({ vehicle, route, allRoutes, onClose }: BusCardProps) => {
   const [isClosing, setIsClosing] = useState(false);
+  const [isOpening, setIsOpening] = useState(true);
   const [panelHeight, setPanelHeight] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   
   const panelRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef(0);
   const dragStartHeight = useRef(0);
+
+  // Trigger opening animation
+  useEffect(() => {
+    const timer = setTimeout(() => setIsOpening(false), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   const color = route.color === '000000' ? '6B7280' : route.color;
   const speedMph = Math.round(vehicle.speedKmHr * 0.621371);
@@ -161,8 +168,8 @@ const BusCard = ({ vehicle, route, allRoutes, onClose }: BusCardProps) => {
       {/* Backdrop */}
       <div 
         className={cn(
-          "fixed inset-0 z-[999] bg-black/20 transition-opacity duration-200",
-          isClosing ? "opacity-0" : "opacity-100"
+          "fixed inset-0 z-[999] bg-black/20 transition-opacity duration-300",
+          isClosing ? "opacity-0" : isOpening ? "opacity-0" : "opacity-100"
         )}
         onClick={handleClose}
       />
@@ -171,12 +178,12 @@ const BusCard = ({ vehicle, route, allRoutes, onClose }: BusCardProps) => {
       <div 
         ref={panelRef}
         className={cn(
-          "fixed top-0 left-0 right-0 bg-card border-b border-border rounded-b-2xl shadow-2xl z-[1000] flex flex-col transition-transform duration-200",
-          isClosing && "-translate-y-full"
+          "fixed top-0 left-0 right-0 bg-card border-b border-border rounded-b-2xl shadow-2xl z-[1000] flex flex-col",
+          isClosing ? "-translate-y-full" : isOpening ? "-translate-y-full" : "translate-y-0"
         )}
         style={{ 
           height: `${panelHeight || minHeight}vh`,
-          transition: isDragging ? 'none' : 'height 0.2s ease-out, transform 0.2s ease-out'
+          transition: isDragging ? 'none' : 'height 0.2s ease-out, transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
         }}
       >
         {/* Header */}
