@@ -9,6 +9,7 @@ interface BusMapProps {
   selectedRoute: string | null;
   selectedStop: Stop | null;
   onStopClick: (stop: Stop, route: Route) => void;
+  isVisible?: boolean;
 }
 
 // Different dash patterns for overlapping routes
@@ -20,7 +21,7 @@ const ROUTE_STYLES: Record<number, { dashArray?: string; weight: number; offset:
   4: { weight: 3, offset: -5 },
 };
 
-const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick }: BusMapProps) => {
+const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick, isVisible = true }: BusMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
@@ -307,6 +308,17 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, onStopClick }: 
       });
     }
   }, [selectedStop]);
+
+  // Invalidate map size when visibility changes (fixes tab switching issue)
+  useEffect(() => {
+    if (isVisible && mapRef.current) {
+      // Small delay to ensure container is rendered
+      const timer = setTimeout(() => {
+        mapRef.current?.invalidateSize();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible]);
 
   return (
     <div ref={mapContainerRef} className="w-full h-full" />
