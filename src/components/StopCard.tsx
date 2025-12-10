@@ -41,14 +41,20 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
+      // Find all routes that have a stop at this location (using coordinate matching)
+      const stopLocationKey = `${stop.lat.toFixed(4)},${stop.lon.toFixed(4)}`;
       const routesWithStop = allRoutes.filter(r => 
-        r.stops.some(s => s.tag === stop.tag)
+        r.stops.some(s => `${s.lat.toFixed(4)},${s.lon.toFixed(4)}` === stopLocationKey)
       );
       
       const allPreds: StopPredictions[] = [];
       for (const r of routesWithStop) {
-        const preds = await fetchPredictions(stop.tag, r.tag);
-        allPreds.push(...preds);
+        // Find the stop tag for this route at this location
+        const routeStop = r.stops.find(s => `${s.lat.toFixed(4)},${s.lon.toFixed(4)}` === stopLocationKey);
+        if (routeStop) {
+          const preds = await fetchPredictions(routeStop.tag, r.tag);
+          allPreds.push(...preds);
+        }
       }
       
       // Fetch vehicle locations
