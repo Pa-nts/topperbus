@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Send, MessageSquare, Bug, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,14 +16,39 @@ const feedbackTypes = [
   { id: 'feedback' as FeedbackType, label: 'General Feedback', icon: MessageSquare, description: 'Comments or questions' },
 ];
 
+const COOLDOWN_SECONDS = 60;
+const STORAGE_KEY = 'wku_feedback_last_submit';
+
 const Feedback = () => {
   const [type, setType] = useState<FeedbackType>('feedback');
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+
+  // Check cooldown on mount and update timer
+  useEffect(() => {
+    const checkCooldown = () => {
+      const lastSubmit = localStorage.getItem(STORAGE_KEY);
+      if (lastSubmit) {
+        const elapsed = Math.floor((Date.now() - parseInt(lastSubmit)) / 1000);
+        const remaining = Math.max(0, COOLDOWN_SECONDS - elapsed);
+        setCooldownRemaining(remaining);
+      }
+    };
+
+    checkCooldown();
+    const interval = setInterval(checkCooldown, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (cooldownRemaining > 0) {
+      toast.error(`Please wait ${cooldownRemaining} seconds before submitting again`);
+      return;
+    }
     
     if (!message.trim()) {
       toast.error('Please enter a message');
@@ -38,11 +63,20 @@ const Feedback = () => {
     setIsSubmitting(true);
     
     try {
-      const { error } = await supabase.functions.invoke('send-feedback', {
+      const { data, error } = await supabase.functions.invoke('send-feedback', {
         body: { type, message: message.trim(), email: email.trim() || undefined }
       });
 
       if (error) throw error;
+      
+      if (data?.error === 'rate_limited') {
+        toast.error('Too many submissions. Please try again later.');
+        return;
+      }
+
+      // Set cooldown
+      localStorage.setItem(STORAGE_KEY, Date.now().toString());
+      setCooldownRemaining(COOLDOWN_SECONDS);
 
       toast.success('Feedback sent! Thank you for helping improve WKU Transit.');
       setMessage('');
@@ -55,6 +89,8 @@ const Feedback = () => {
       setIsSubmitting(false);
     }
   };
+
+  const isDisabled = isSubmitting || !message.trim() || cooldownRemaining > 0;
 
   return (
     <main className="min-h-screen bg-background">
@@ -144,10 +180,12 @@ const Feedback = () => {
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={isSubmitting || !message.trim()}
+            disabled={isDisabled}
           >
             {isSubmitting ? (
               'Sending...'
+            ) : cooldownRemaining > 0 ? (
+              `Wait ${cooldownRemaining}s`
             ) : (
               <>
                 <Send className="w-4 h-4 mr-2" />

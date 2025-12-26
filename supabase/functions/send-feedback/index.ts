@@ -11,13 +11,56 @@ interface FeedbackRequest {
   email?: string;
 }
 
+// Simple in-memory rate limiter (resets on cold start, but provides basic protection)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 3;
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+  
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return false;
+  }
+  
+  if (record.count >= MAX_REQUESTS_PER_WINDOW) {
+    return true;
+  }
+  
+  record.count++;
+  return false;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Get client IP for rate limiting
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     req.headers.get('cf-connecting-ip') || 
+                     'unknown';
+    
+    if (isRateLimited(clientIp)) {
+      console.log(`Rate limited IP: ${clientIp}`);
+      return new Response(
+        JSON.stringify({ error: 'rate_limited', message: 'Too many requests. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { type, message, email }: FeedbackRequest = await req.json();
+
+    // Validate type
+    if (!['suggestion', 'bug', 'feedback'].includes(type)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid feedback type' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Route to appropriate webhook based on feedback type
     const webhookMap = {
@@ -36,10 +79,17 @@ serve(async (req) => {
       );
     }
 
-
-    if (!message || message.trim().length < 10) {
+    if (!message || typeof message !== 'string' || message.trim().length < 10 || message.length > 2000) {
       return new Response(
-        JSON.stringify({ error: 'Message too short' }),
+        JSON.stringify({ error: 'Invalid message length' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate email if provided
+    if (email && (typeof email !== 'string' || email.length > 255)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid email' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
