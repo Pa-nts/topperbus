@@ -189,12 +189,15 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
     }
   }, [sortedPredictions.length, hasRouteFilters, isDragging, minHeight]);
 
-  // Drag handlers
+  // Drag handlers - now tracks Y position for swipe-to-dismiss
+  const dragOffsetY = useRef(0);
+  
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true);
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     dragStartY.current = clientY;
     dragStartHeight.current = panelHeight || minHeight;
+    dragOffsetY.current = 0;
   };
 
   useEffect(() => {
@@ -203,6 +206,13 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
       
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       const deltaY = clientY - dragStartY.current;
+      
+      // If dragging up (negative deltaY), close the panel
+      if (deltaY < -50) {
+        dragOffsetY.current = deltaY;
+        return;
+      }
+      
       const windowHeight = window.innerHeight;
       const deltaPercent = (deltaY / windowHeight) * 100;
       
@@ -213,6 +223,12 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
     const handleDragEnd = () => {
       if (!isDragging) return;
       setIsDragging(false);
+      
+      // If swiped up significantly, close the panel
+      if (dragOffsetY.current < -50) {
+        handleClose();
+        return;
+      }
       
       // Snap to nearest point
       const midPoint = (minHeight + MAX_HEIGHT) / 2;
@@ -307,14 +323,6 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
 
   return (
     <>
-      {/* Backdrop - transparent click target, no visual overlay */}
-      <div 
-        className={cn(
-          "fixed inset-0 z-[999]",
-          isClosing && "pointer-events-none"
-        )}
-        onClick={handleClose}
-      />
       
       {/* Panel */}
       <div 

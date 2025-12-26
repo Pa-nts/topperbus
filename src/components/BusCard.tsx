@@ -110,12 +110,15 @@ const BusCard = ({ vehicle, route, allRoutes, onClose }: BusCardProps) => {
     }
   }, [infoItems.length, isDragging, minHeight, panelHeight]);
 
-  // Drag handlers
+  // Drag handlers - now tracks Y position for swipe-to-dismiss
+  const dragOffsetY = useRef(0);
+  
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true);
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     dragStartY.current = clientY;
     dragStartHeight.current = panelHeight || minHeight;
+    dragOffsetY.current = 0;
   };
 
   useEffect(() => {
@@ -124,6 +127,13 @@ const BusCard = ({ vehicle, route, allRoutes, onClose }: BusCardProps) => {
       
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       const deltaY = clientY - dragStartY.current;
+      
+      // If dragging up (negative deltaY), track for swipe-to-dismiss
+      if (deltaY < -50) {
+        dragOffsetY.current = deltaY;
+        return;
+      }
+      
       const windowHeight = window.innerHeight;
       const deltaPercent = (deltaY / windowHeight) * 100;
       
@@ -134,6 +144,12 @@ const BusCard = ({ vehicle, route, allRoutes, onClose }: BusCardProps) => {
     const handleDragEnd = () => {
       if (!isDragging) return;
       setIsDragging(false);
+      
+      // If swiped up significantly, close the panel
+      if (dragOffsetY.current < -50) {
+        handleClose();
+        return;
+      }
       
       const midPoint = (minHeight + MAX_HEIGHT) / 2;
       if ((panelHeight || minHeight) > midPoint) {
@@ -165,14 +181,6 @@ const BusCard = ({ vehicle, route, allRoutes, onClose }: BusCardProps) => {
 
   return (
     <>
-      {/* Backdrop - transparent click target, no visual overlay */}
-      <div 
-        className={cn(
-          "fixed inset-0 z-[999]",
-          isClosing && "pointer-events-none"
-        )}
-        onClick={handleClose}
-      />
       
       {/* Panel */}
       <div 
