@@ -3,6 +3,7 @@ import { Stop, Route, StopPredictions, Prediction, VehicleLocation } from '@/typ
 import { fetchPredictions, fetchVehicleLocations } from '@/lib/api';
 import { Clock, MapPin, X, RefreshCw, Bus, Navigation } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getCurrentBreakPeriod, formatBreakDates } from '@/lib/academicCalendar';
 
 interface StopCardProps {
   stop: Stop;
@@ -61,17 +62,19 @@ const HEADER_HEIGHT = 160; // approx header height in pixels
 const PREDICTION_ITEM_HEIGHT = 64; // approx height per prediction item (reduced)
 const DRAG_HANDLE_HEIGHT = 36; // drag handle height
 const MAX_HEIGHT = 75; // percentage
-const NO_ARRIVALS_HEIGHT = 140; // height for no arrivals message
+const NO_ARRIVALS_HEIGHT = 100; // height for no arrivals message
+const OUT_OF_SERVICE_HEIGHT = 100; // height for out of service warning
 
 // Calculate dynamic minimum height based on number of predictions (show up to 3)
-const calculateMinHeight = (predCount: number, hasRouteFilters: boolean): number => {
+const calculateMinHeight = (predCount: number, hasRouteFilters: boolean, hasOutOfServiceRoutes: boolean): number => {
   const windowHeight = window.innerHeight;
   const itemsToShow = Math.min(predCount, 3);
   const filterHeight = hasRouteFilters ? 40 : 0;
   const baseHeader = HEADER_HEIGHT + filterHeight;
   
   if (predCount === 0) {
-    return Math.min(MAX_HEIGHT, ((baseHeader + NO_ARRIVALS_HEIGHT + DRAG_HANDLE_HEIGHT) / windowHeight) * 100);
+    const outOfServiceHeight = hasOutOfServiceRoutes ? OUT_OF_SERVICE_HEIGHT : 0;
+    return Math.min(MAX_HEIGHT, ((baseHeader + outOfServiceHeight + NO_ARRIVALS_HEIGHT + DRAG_HANDLE_HEIGHT) / windowHeight) * 100);
   }
   
   const contentHeight = baseHeader + (itemsToShow * PREDICTION_ITEM_HEIGHT) + DRAG_HANDLE_HEIGHT;
@@ -176,7 +179,8 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
 
   // Calculate minimum height based on predictions and whether filters are shown
   const hasRouteFilters = routesInService.length > 1;
-  const minHeight = calculateMinHeight(sortedPredictions.length, hasRouteFilters);
+  const hasOutOfServiceRoutes = routesOutOfService.length > 0;
+  const minHeight = calculateMinHeight(sortedPredictions.length, hasRouteFilters, hasOutOfServiceRoutes);
 
   // Update panel height when predictions change
   useEffect(() => {
@@ -427,38 +431,49 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
               </div>
             </div>
           ) : sortedPredictions.length === 0 ? (
-            <div className="py-6">
+            <div className="py-4">
               {/* Show routes that are out of service - at top */}
-              {routesOutOfService.length > 0 && (
-                <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-left">
-                  <p className="text-xs text-amber-200/90 mb-2 font-medium">Routes not currently in service:</p>
-                  {routesOutOfService.map(r => {
-                    const schedule = ROUTE_SCHEDULES[r.tag];
-                    const color = r.color === '000000' ? '6B7280' : r.color;
-                    return (
-                      <div key={r.tag} className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                        <span 
-                          className="w-2 h-2 rounded-full" 
-                          style={{ backgroundColor: `#${color}` }} 
-                        />
-                        <span>{r.title}</span>
-                        {schedule && (
-                          <span className="text-amber-400/80">
-                            ({schedule.startHour > 12 ? schedule.startHour - 12 : schedule.startHour}:{schedule.startMin.toString().padStart(2, '0')} {schedule.startHour >= 12 ? 'PM' : 'AM'} - {schedule.endHour > 12 ? schedule.endHour - 12 : schedule.endHour}:{schedule.endMin.toString().padStart(2, '0')} PM)
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Service runs Mon-Fri during Fall & Spring semesters
-                  </p>
-                </div>
-              )}
+              {routesOutOfService.length > 0 && (() => {
+                const breakPeriod = getCurrentBreakPeriod();
+                return (
+                  <div className="mb-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-left">
+                    <p className="text-xs text-amber-200/90 mb-1.5 font-medium">
+                      {breakPeriod 
+                        ? `Service suspended for ${breakPeriod.name} (${formatBreakDates(breakPeriod)})`
+                        : 'Routes not currently in service:'
+                      }
+                    </p>
+                    {!breakPeriod && routesOutOfService.map(r => {
+                      const schedule = ROUTE_SCHEDULES[r.tag];
+                      const color = r.color === '000000' ? '6B7280' : r.color;
+                      return (
+                        <div key={r.tag} className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                          <span 
+                            className="w-2 h-2 rounded-full" 
+                            style={{ backgroundColor: `#${color}` }} 
+                          />
+                          <span>{r.title}</span>
+                          {schedule && (
+                            <span className="text-amber-400/80">
+                              ({schedule.startHour > 12 ? schedule.startHour - 12 : schedule.startHour}:{schedule.startMin.toString().padStart(2, '0')} {schedule.startHour >= 12 ? 'PM' : 'AM'} - {schedule.endHour > 12 ? schedule.endHour - 12 : schedule.endHour}:{schedule.endMin.toString().padStart(2, '0')} PM)
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <p className="text-xs text-muted-foreground mt-1.5">
+                      {breakPeriod 
+                        ? 'WKU Transit operates Mon-Fri during Fall & Spring semesters only.'
+                        : 'Service runs Mon-Fri during Fall & Spring semesters'
+                      }
+                    </p>
+                  </div>
+                );
+              })()}
               
               <div className="text-center">
-                <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-muted-foreground">No upcoming arrivals</p>
+                <Clock className="w-6 h-6 text-muted-foreground mx-auto mb-1.5" />
+                <p className="text-sm text-muted-foreground">No upcoming arrivals</p>
               </div>
             </div>
           ) : (

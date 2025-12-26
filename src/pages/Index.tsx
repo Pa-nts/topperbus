@@ -13,6 +13,7 @@ import { Bus, ScanLine, List, Map as MapIcon, RefreshCw, Calendar, AlertTriangle
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getCurrentBreakPeriod, formatBreakDates } from '@/lib/academicCalendar';
 
 const Index = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -220,6 +221,9 @@ const Index = () => {
             const minutes = now.getMinutes();
             const currentTime = hours * 60 + minutes;
             
+            // Check for school break first
+            const breakPeriod = getCurrentBreakPeriod();
+            
             // Service hours: Mon-Fri, roughly 7:15 AM - 5:30 PM
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
             const serviceStart = 7 * 60 + 15; // 7:15 AM
@@ -230,7 +234,19 @@ const Index = () => {
               !vehicles.some(v => v.routeTag === r.tag)
             );
             
-            // Determine the message based on conditions
+            // School break takes priority
+            if (breakPeriod) {
+              return (
+                <div className="mt-3 flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-200/90">
+                    <span className="font-medium">Note:</span> Buses are out of service for {breakPeriod.name} ({formatBreakDates(breakPeriod)}). WKU Transit operates Mon-Fri during Fall & Spring semesters only.
+                  </p>
+                </div>
+              );
+            }
+            
+            // Weekend message
             if (isWeekend) {
               return (
                 <div className="mt-3 flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
@@ -242,6 +258,7 @@ const Index = () => {
               );
             }
             
+            // Outside hours message
             if (isOutsideHours && inactiveRoutes.length === routes.length) {
               return (
                 <div className="mt-3 flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
