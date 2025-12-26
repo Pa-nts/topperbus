@@ -2,3 +2,6 @@ project_id = "gfiaxxqvwivlzpnahvoo"
 
 [functions.calendar-reminder]
 verify_jwt = false
+
+[functions.send-feedback]
+verify_jwt = false
