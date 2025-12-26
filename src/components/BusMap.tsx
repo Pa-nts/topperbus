@@ -1,6 +1,8 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useCallback, useState, useImperativeHandle, forwardRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-routing-machine';
+import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 import { Route, VehicleLocation, Stop } from '@/types/transit';
 import { CAMPUS_BUILDINGS, CampusBuilding, CATEGORY_ICONS, BuildingCategory } from '@/lib/campusBuildings';
 
@@ -15,6 +17,13 @@ interface BusMapProps {
   onVehicleClick: (vehicle: VehicleLocation, route: Route) => void;
   onBuildingClick: (building: CampusBuilding) => void;
   isVisible?: boolean;
+  userLocation: { lat: number; lon: number } | null;
+  directionsDestination: CampusBuilding | null;
+  onClearDirections?: () => void;
+}
+
+export interface BusMapHandle {
+  getMap: () => L.Map | null;
 }
 
 // Different dash patterns for overlapping routes
@@ -26,13 +35,33 @@ const ROUTE_STYLES: Record<number, { dashArray?: string; weight: number; offset:
   4: { weight: 3, offset: -5 },
 };
 
-const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle, selectedBuilding, onStopClick, onVehicleClick, onBuildingClick, isVisible = true }: BusMapProps) => {
+const BusMap = forwardRef<BusMapHandle, BusMapProps>(({ 
+  routes, 
+  vehicles, 
+  selectedRoute, 
+  selectedStop, 
+  selectedVehicle, 
+  selectedBuilding, 
+  onStopClick, 
+  onVehicleClick, 
+  onBuildingClick, 
+  isVisible = true,
+  userLocation,
+  directionsDestination,
+  onClearDirections,
+}, ref) => {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
   const polylinesRef = useRef<L.LayerGroup | null>(null);
   const vehicleMarkersRef = useRef<L.LayerGroup | null>(null);
   const buildingMarkersRef = useRef<L.LayerGroup | null>(null);
+  const userLocationMarkerRef = useRef<L.Marker | null>(null);
+  const routingControlRef = useRef<L.Routing.Control | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    getMap: () => mapRef.current,
+  }));
 
   // Initialize map
   useEffect(() => {
@@ -84,19 +113,15 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
       let bearing: number;
       
       if (i === 0) {
-        // First point: use bearing to next point
         bearing = calculateBearing(current, latLngs[i + 1]);
       } else if (i === latLngs.length - 1) {
-        // Last point: use bearing from previous point
         bearing = calculateBearing(latLngs[i - 1], current);
       } else {
-        // Middle points: average of incoming and outgoing bearings
         const bearingIn = calculateBearing(latLngs[i - 1], current);
         const bearingOut = calculateBearing(current, latLngs[i + 1]);
         bearing = (bearingIn + bearingOut) / 2;
       }
       
-      // Offset perpendicular to the bearing
       const perpBearing = bearing + 90;
       const offsetPoint = offsetPoint2(current, perpBearing, offsetMeters);
       offsetLatLngsResult.push(offsetPoint);
@@ -117,7 +142,7 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
   };
 
   const offsetPoint2 = (point: [number, number], bearing: number, distanceMeters: number): [number, number] => {
-    const R = 6371000; // Earth's radius in meters
+    const R = 6371000;
     const bearingRad = bearing * Math.PI / 180;
     const lat1 = point[0] * Math.PI / 180;
     const lon1 = point[1] * Math.PI / 180;
@@ -147,10 +172,8 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
       route.paths.forEach(path => {
         const latLngs = path.map(point => [point.lat, point.lon] as [number, number]);
         
-        // Apply offset when showing all routes
         const offsetPath = selectedRoute ? latLngs : offsetLatLngs(latLngs, style.offset);
         
-        // Add a white outline for better visibility
         if (!selectedRoute) {
           L.polyline(offsetPath, {
             color: '#1a1f2e',
@@ -159,7 +182,6 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
           }).addTo(polylinesRef.current!);
         }
         
-        // Main route line
         const polyline = L.polyline(offsetPath, {
           color,
           weight: style.weight,
@@ -169,7 +191,6 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
           lineJoin: 'round',
         });
         
-        // Add tooltip on hover
         polyline.bindTooltip(route.title, {
           sticky: true,
           className: 'route-tooltip',
@@ -192,26 +213,19 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
     const poleX = (width - poleWidth) / 2;
     const cornerRadius = 3;
     
-    // Bus icon path (simplified)
     const busIconScale = isSelected ? 0.5 : 0.4;
     const busIconX = width / 2;
     const busIconY = signY + signHeight / 2;
     
-    // Selected state uses green glow effect
     const poleColor = isSelected ? '#22c55e' : '#1a1f2e';
     const borderColor = isSelected ? '#22c55e' : '#1a1f2e';
     
     if (colors.length === 1) {
-      // Single route - solid color sign
       return `
         <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-          <!-- Pole -->
           <rect x="${poleX}" y="${signY + signHeight - 2}" width="${poleWidth}" height="${height - signHeight}" fill="${poleColor}" rx="1"/>
-          <!-- Sign background/border -->
           <rect x="${signX - 1}" y="${signY - 1}" width="${signWidth + 2}" height="${signHeight + 2}" rx="${cornerRadius + 1}" fill="${borderColor}"/>
-          <!-- Sign -->
           <rect x="${signX}" y="${signY}" width="${signWidth}" height="${signHeight}" rx="${cornerRadius}" fill="#${colors[0]}" ${isSelected ? 'opacity="0.85"' : ''}/>
-          <!-- Bus icon -->
           <g transform="translate(${busIconX}, ${busIconY}) scale(${busIconScale})">
             <path d="M-8 4c0 .88.39 1.67 1 2.22V8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1V6.22c.61-.55 1-1.34 1-2.22V-6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S-5.33 2-4.5 2 -3 2.67-3 3.5-3.67 5-4.5 5zm9 0c-.83 0-1.5-.67-1.5-1.5S3.67 2 4.5 2 6 2.67 6 3.5 5.33 5 4.5 5zm1.5-6H-6V-6h12v5z" fill="white"/>
           </g>
@@ -219,7 +233,6 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
       `;
     }
     
-    // Multiple routes - split sign with gradient/segments
     const segmentWidth = signWidth / colors.length;
     let segments = '';
     
@@ -229,30 +242,22 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
       const isLast = index === colors.length - 1;
       
       if (isFirst) {
-        // First segment with left rounded corners
         segments += `<path d="M ${x + cornerRadius} ${signY} H ${x + segmentWidth} V ${signY + signHeight} H ${x + cornerRadius} Q ${x} ${signY + signHeight} ${x} ${signY + signHeight - cornerRadius} V ${signY + cornerRadius} Q ${x} ${signY} ${x + cornerRadius} ${signY}" fill="#${color}"/>`;
       } else if (isLast) {
-        // Last segment with right rounded corners
         segments += `<path d="M ${x} ${signY} H ${x + segmentWidth - cornerRadius} Q ${x + segmentWidth} ${signY} ${x + segmentWidth} ${signY + cornerRadius} V ${signY + signHeight - cornerRadius} Q ${x + segmentWidth} ${signY + signHeight} ${x + segmentWidth - cornerRadius} ${signY + signHeight} H ${x} V ${signY}" fill="#${color}"/>`;
       } else {
-        // Middle segments - just rectangles
         segments += `<rect x="${x}" y="${signY}" width="${segmentWidth}" height="${signHeight}" fill="#${color}"/>`;
       }
     });
     
-    // Selected state uses green glow effect for multi-route
     const multiPoleColor = isSelected ? '#22c55e' : '#1a1f2e';
     const multiBorderColor = isSelected ? '#22c55e' : '#1a1f2e';
     
     return `
       <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-        <!-- Pole -->
         <rect x="${poleX}" y="${signY + signHeight - 2}" width="${poleWidth}" height="${height - signHeight}" fill="${multiPoleColor}" rx="1"/>
-        <!-- Sign background/border -->
         <rect x="${signX - 1}" y="${signY - 1}" width="${signWidth + 2}" height="${signHeight + 2}" rx="${cornerRadius + 1}" fill="${multiBorderColor}"/>
-        <!-- Color segments -->
         ${segments}
-        <!-- Bus icon -->
         <g transform="translate(${busIconX}, ${busIconY}) scale(${busIconScale})">
           <path d="M-8 4c0 .88.39 1.67 1 2.22V8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1V6.22c.61-.55 1-1.34 1-2.22V-6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S-5.33 2-4.5 2 -3 2.67-3 3.5-3.67 5-4.5 5zm9 0c-.83 0-1.5-.67-1.5-1.5S3.67 2 4.5 2 6 2.67 6 3.5 5.33 5 4.5 5zm1.5-6H-6V-6h12v5z" fill="white"/>
         </g>
@@ -265,11 +270,9 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
     if (!markersRef.current) return;
     markersRef.current.clearLayers();
 
-    // Collect stops with ALL their routes - group by location to merge overlapping stops
     const stopsMap = new Map<string, { stop: Stop; routes: Route[]; tags: string[] }>();
     displayedRoutes.forEach(route => {
       route.stops.forEach(stop => {
-        // Use lat/lon as key to merge stops at the same location (rounded to ~11m precision)
         const locationKey = `${stop.lat.toFixed(4)},${stop.lon.toFixed(4)}`;
         const existing = stopsMap.get(locationKey);
         if (existing) {
@@ -335,7 +338,6 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
     const direction = route.directions.find(d => d.tag === vehicle.dirTag);
     if (!direction || direction.stops.length === 0) return null;
     
-    // Find the closest stop to the bus's current position
     let closestStopIndex = 0;
     let minDistance = Infinity;
     
@@ -352,7 +354,6 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
       }
     });
     
-    // Get the next stop (or current if at the end)
     const nextStopIndex = Math.min(closestStopIndex + 1, direction.stops.length - 1);
     const nextStopTag = direction.stops[nextStopIndex];
     const nextStop = route.stops.find(s => s.tag === nextStopTag);
@@ -439,7 +440,6 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
     if (selectedRoute) {
       const route = routes.find(r => r.tag === selectedRoute);
       if (route && route.paths.length > 0) {
-        // Collect all points from the route's paths
         const allPoints: [number, number][] = [];
         route.paths.forEach(path => {
           path.forEach(point => {
@@ -452,12 +452,11 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
           mapRef.current.fitBounds(bounds, {
             animate: true,
             duration: 0.5,
-            padding: [50, 50], // Add some padding around the route
+            padding: [50, 50],
           });
         }
       }
     } else {
-      // When deselecting, zoom back to show all routes
       const allPoints: [number, number][] = [];
       routes.forEach(route => {
         route.paths.forEach(path => {
@@ -478,55 +477,27 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
     }
   }, [selectedRoute, routes]);
 
-  // Helper to create building marker SVG with category icons
-  const createBuildingMarkerSvg = (categories: BuildingCategory[], isSelected: boolean): string => {
-    const size = 24;
-    const iconSize = categories.length > 1 ? 10 : 12;
+  // Helper to create building marker SVG with category icons AND abbreviation
+  const createBuildingMarkerSvg = (building: CampusBuilding, isSelected: boolean): string => {
+    const categories = building.categories;
+    const abbr = building.abbreviation;
+    const markerWidth = 44;
+    const markerHeight = 28;
+    const iconSize = 12;
     const bgColor = isSelected ? '#22c55e' : '#1e293b';
     const borderColor = isSelected ? '#4ade80' : '#475569';
     
-    if (categories.length === 1) {
-      // Single category - centered icon
-      const category = categories[0];
-      const iconData = CATEGORY_ICONS[category];
-      return `
-        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-          <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 1}" fill="${bgColor}" stroke="${borderColor}" stroke-width="2"/>
-          <g transform="translate(${(size - iconSize) / 2}, ${(size - iconSize) / 2}) scale(${iconSize / 16})">
-            <path d="${iconData.path}" fill="white"/>
-          </g>
-        </svg>
-      `;
-    }
+    const primaryCategory = categories[0];
+    const iconData = CATEGORY_ICONS[primaryCategory];
     
-    // Multiple categories - split icon (show first two)
-    const cat1 = categories[0];
-    const cat2 = categories[1];
-    const icon1 = CATEGORY_ICONS[cat1];
-    const icon2 = CATEGORY_ICONS[cat2];
-    
+    // Pill shape with icon on left, abbreviation on right
     return `
-      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-        <defs>
-          <clipPath id="leftHalf">
-            <rect x="0" y="0" width="${size/2}" height="${size}"/>
-          </clipPath>
-          <clipPath id="rightHalf">
-            <rect x="${size/2}" y="0" width="${size/2}" height="${size}"/>
-          </clipPath>
-        </defs>
-        <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 1}" fill="${bgColor}" stroke="${borderColor}" stroke-width="2"/>
-        <g clip-path="url(#leftHalf)">
-          <g transform="translate(${size/4 - iconSize/2}, ${(size - iconSize) / 2}) scale(${iconSize / 16})">
-            <path d="${icon1.path}" fill="white"/>
-          </g>
+      <svg width="${markerWidth}" height="${markerHeight}" viewBox="0 0 ${markerWidth} ${markerHeight}">
+        <rect x="1" y="1" width="${markerWidth - 2}" height="${markerHeight - 2}" rx="${markerHeight / 2 - 1}" fill="${bgColor}" stroke="${borderColor}" stroke-width="2"/>
+        <g transform="translate(7, ${(markerHeight - iconSize) / 2}) scale(${iconSize / 16})">
+          <path d="${iconData.path}" fill="white"/>
         </g>
-        <g clip-path="url(#rightHalf)">
-          <g transform="translate(${size*3/4 - iconSize/2}, ${(size - iconSize) / 2}) scale(${iconSize / 16})">
-            <path d="${icon2.path}" fill="white"/>
-          </g>
-        </g>
-        <line x1="${size/2}" y1="4" x2="${size/2}" y2="${size - 4}" stroke="${borderColor}" stroke-width="1"/>
+        <text x="${markerWidth / 2 + 6}" y="${markerHeight / 2 + 1}" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="9" font-weight="600" font-family="system-ui, sans-serif">${abbr}</text>
       </svg>
     `;
   };
@@ -538,47 +509,146 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
 
     CAMPUS_BUILDINGS.forEach(building => {
       const isSelected = selectedBuilding?.id === building.id;
-      const size = isSelected ? 28 : 24;
+      const markerWidth = isSelected ? 48 : 44;
+      const markerHeight = isSelected ? 32 : 28;
 
       const icon = L.divIcon({
         className: 'custom-building-marker',
         html: `
           <div style="
-            width: ${size}px;
-            height: ${size}px;
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)) ${isSelected ? 'drop-shadow(0 0 6px rgba(34, 197, 94, 0.6))' : ''};
             transition: all 0.2s ease;
             cursor: pointer;
+            ${isSelected ? 'transform: scale(1.1);' : ''}
           ">
-            ${createBuildingMarkerSvg(building.categories, isSelected)}
+            ${createBuildingMarkerSvg(building, isSelected)}
           </div>
         `,
-        iconSize: [size, size],
-        iconAnchor: [size / 2, size / 2],
+        iconSize: [markerWidth, markerHeight],
+        iconAnchor: [markerWidth / 2, markerHeight / 2],
       });
 
       const marker = L.marker([building.lat, building.lon], { icon })
-        .bindTooltip(building.abbreviation, {
+        .bindTooltip(building.name, {
           permanent: false,
           direction: 'top',
-          offset: [0, -12],
+          offset: [0, -14],
           className: 'building-tooltip',
         })
         .on('click', () => onBuildingClick(building));
 
       marker.addTo(buildingMarkersRef.current!);
     });
-  }, [selectedBuilding, onBuildingClick, CAMPUS_BUILDINGS]);
+  }, [selectedBuilding, onBuildingClick]);
+
+  // User location marker
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Remove existing marker
+    if (userLocationMarkerRef.current) {
+      userLocationMarkerRef.current.remove();
+      userLocationMarkerRef.current = null;
+    }
+
+    if (userLocation) {
+      const userIcon = L.divIcon({
+        className: 'user-location-marker',
+        html: `
+          <div style="
+            width: 20px;
+            height: 20px;
+            position: relative;
+          ">
+            <div style="
+              position: absolute;
+              inset: 0;
+              background: rgba(59, 130, 246, 0.3);
+              border-radius: 50%;
+              animation: userPulse 2s ease-out infinite;
+            "></div>
+            <div style="
+              position: absolute;
+              inset: 4px;
+              background: #3b82f6;
+              border: 3px solid white;
+              border-radius: 50%;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            "></div>
+          </div>
+        `,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+      });
+
+      userLocationMarkerRef.current = L.marker([userLocation.lat, userLocation.lon], { icon: userIcon })
+        .bindTooltip('You are here', {
+          permanent: false,
+          direction: 'top',
+          offset: [0, -10],
+        })
+        .addTo(mapRef.current);
+    }
+  }, [userLocation]);
+
+  // Walking directions
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Remove existing routing control
+    if (routingControlRef.current) {
+      mapRef.current.removeControl(routingControlRef.current);
+      routingControlRef.current = null;
+    }
+
+    if (userLocation && directionsDestination) {
+      routingControlRef.current = L.Routing.control({
+        waypoints: [
+          L.latLng(userLocation.lat, userLocation.lon),
+          L.latLng(directionsDestination.lat, directionsDestination.lon),
+        ],
+        router: L.Routing.osrmv1({
+          serviceUrl: 'https://router.project-osrm.org/route/v1',
+          profile: 'foot',
+        }),
+        lineOptions: {
+          styles: [
+            { color: '#3b82f6', weight: 5, opacity: 0.8 },
+            { color: '#1e40af', weight: 2, opacity: 1 },
+          ],
+          extendToWaypoints: true,
+          missingRouteTolerance: 0,
+        },
+        show: false,
+        addWaypoints: false,
+        routeWhileDragging: false,
+        fitSelectedRoutes: true,
+        showAlternatives: false,
+      } as any).addTo(mapRef.current);
+
+      // Listen for route found event to display summary
+      routingControlRef.current.on('routesfound', (e: any) => {
+        const routes = e.routes;
+        if (routes && routes.length > 0) {
+          const summary = routes[0].summary;
+          const distanceKm = (summary.totalDistance / 1000).toFixed(2);
+          const distanceMi = (summary.totalDistance / 1609.34).toFixed(2);
+          const timeMin = Math.round(summary.totalTime / 60);
+          console.log(`Route found: ${distanceMi} mi (${distanceKm} km), ~${timeMin} min walk`);
+        }
+      });
+    }
+  }, [userLocation, directionsDestination]);
 
   // Center on selected building
   useEffect(() => {
-    if (selectedBuilding && mapRef.current && !selectedStop && !selectedVehicle) {
+    if (selectedBuilding && mapRef.current && !selectedStop && !selectedVehicle && !directionsDestination) {
       mapRef.current.setView([selectedBuilding.lat, selectedBuilding.lon], 17, {
         animate: true,
         duration: 0.5,
       });
     }
-  }, [selectedBuilding, selectedStop, selectedVehicle]);
+  }, [selectedBuilding, selectedStop, selectedVehicle, directionsDestination]);
 
   // Center on selected stop
   useEffect(() => {
@@ -600,10 +670,9 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
     }
   }, [selectedVehicle?.lat, selectedVehicle?.lon]);
 
-  // Invalidate map size when visibility changes (fixes tab switching issue)
+  // Invalidate map size when visibility changes
   useEffect(() => {
     if (isVisible && mapRef.current) {
-      // Small delay to ensure container is rendered
       const timer = setTimeout(() => {
         mapRef.current?.invalidateSize();
       }, 100);
@@ -614,6 +683,8 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
   return (
     <div ref={mapContainerRef} className="w-full h-full" />
   );
-};
+});
+
+BusMap.displayName = 'BusMap';
 
 export default BusMap;
