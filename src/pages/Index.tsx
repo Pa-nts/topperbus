@@ -9,7 +9,7 @@ import StopCard from '@/components/StopCard';
 import StopList from '@/components/StopList';
 import QRScanner from '@/components/QRScanner';
 import RouteLegend from '@/components/RouteLegend';
-import { Bus, ScanLine, List, Map as MapIcon, RefreshCw, Calendar, AlertTriangle } from 'lucide-react';
+import { Bus, ScanLine, List, Map as MapIcon, RefreshCw, Calendar, AlertTriangle, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -183,6 +183,13 @@ const Index = () => {
             </div>
             
             <div className="flex items-center gap-2">
+              <Link
+                to="/feedback"
+                className="p-2.5 rounded-xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+                title="Feedback"
+              >
+                <MessageSquare className="w-5 h-5" />
+              </Link>
               <Link
                 to="/schedule"
                 className="p-2.5 rounded-xl bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
