@@ -23,7 +23,7 @@ const BREAK_PERIODS: BreakPeriod[] = [
   },
   { 
     name: 'Winter Break', 
-    start: new Date(2024, 11, 6),  // December 6, 2024 (after fall finals)
+    start: new Date(2024, 11, 12), // December 12, 2024 (after finals end Dec 11)
     end: new Date(2025, 0, 20)     // January 20, 2025 (MLK Day)
   },
   
