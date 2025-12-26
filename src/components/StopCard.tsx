@@ -92,6 +92,7 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isOpening, setIsOpening] = useState(true);
+  const [dragTranslateY, setDragTranslateY] = useState(0);
   
   const panelRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef(0);
@@ -189,15 +190,13 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
     }
   }, [sortedPredictions.length, hasRouteFilters, isDragging, minHeight]);
 
-  // Drag handlers - now tracks Y position for swipe-to-dismiss
-  const dragOffsetY = useRef(0);
-  
+  // Drag handlers - tracks Y position for swipe-to-dismiss with smooth animation
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDragging(true);
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     dragStartY.current = clientY;
     dragStartHeight.current = panelHeight || minHeight;
-    dragOffsetY.current = 0;
+    setDragTranslateY(0);
   };
 
   useEffect(() => {
@@ -207,11 +206,14 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       const deltaY = clientY - dragStartY.current;
       
-      // If dragging up (negative deltaY), close the panel
-      if (deltaY < -50) {
-        dragOffsetY.current = deltaY;
+      // If dragging up (negative deltaY), translate the panel up
+      if (deltaY < 0) {
+        setDragTranslateY(deltaY);
         return;
       }
+      
+      // Reset translate if dragging down
+      setDragTranslateY(0);
       
       const windowHeight = window.innerHeight;
       const deltaPercent = (deltaY / windowHeight) * 100;
@@ -225,10 +227,13 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
       setIsDragging(false);
       
       // If swiped up significantly, close the panel
-      if (dragOffsetY.current < -50) {
+      if (dragTranslateY < -50) {
         handleClose();
         return;
       }
+      
+      // Reset translate
+      setDragTranslateY(0);
       
       // Snap to nearest point
       const midPoint = (minHeight + MAX_HEIGHT) / 2;
@@ -252,7 +257,7 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
       window.removeEventListener('touchmove', handleDragMove);
       window.removeEventListener('touchend', handleDragEnd);
     };
-  }, [isDragging, panelHeight, minHeight]);
+  }, [isDragging, panelHeight, minHeight, dragTranslateY]);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -329,10 +334,11 @@ const StopCard = ({ stop, route, allRoutes, onClose }: StopCardProps) => {
         ref={panelRef}
         className={cn(
           "fixed top-0 left-0 right-0 bg-card border-b border-border rounded-b-2xl shadow-2xl z-[1000] flex flex-col",
-          isClosing ? "-translate-y-full" : isOpening ? "-translate-y-full" : "translate-y-0"
+          isClosing ? "-translate-y-full" : isOpening ? "-translate-y-full" : ""
         )}
         style={{ 
           height: `${panelHeight || minHeight}vh`,
+          transform: isClosing ? undefined : isOpening ? undefined : `translateY(${dragTranslateY}px)`,
           transition: isDragging ? 'none' : 'height 0.2s ease-out, transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
         }}
       >
