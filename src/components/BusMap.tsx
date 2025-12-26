@@ -2,7 +2,7 @@ import { useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Route, VehicleLocation, Stop } from '@/types/transit';
-import { CAMPUS_BUILDINGS, CampusBuilding } from '@/lib/campusBuildings';
+import { CAMPUS_BUILDINGS, CampusBuilding, CATEGORY_ICONS, BuildingCategory } from '@/lib/campusBuildings';
 
 interface BusMapProps {
   routes: Route[];
@@ -478,6 +478,59 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
     }
   }, [selectedRoute, routes]);
 
+  // Helper to create building marker SVG with category icons
+  const createBuildingMarkerSvg = (categories: BuildingCategory[], isSelected: boolean): string => {
+    const size = 24;
+    const iconSize = categories.length > 1 ? 10 : 12;
+    const bgColor = isSelected ? '#22c55e' : '#1e293b';
+    const borderColor = isSelected ? '#4ade80' : '#475569';
+    
+    if (categories.length === 1) {
+      // Single category - centered icon
+      const category = categories[0];
+      const iconData = CATEGORY_ICONS[category];
+      return `
+        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+          <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 1}" fill="${bgColor}" stroke="${borderColor}" stroke-width="2"/>
+          <g transform="translate(${(size - iconSize) / 2}, ${(size - iconSize) / 2}) scale(${iconSize / 16})">
+            <path d="${iconData.path}" fill="white"/>
+          </g>
+        </svg>
+      `;
+    }
+    
+    // Multiple categories - split icon (show first two)
+    const cat1 = categories[0];
+    const cat2 = categories[1];
+    const icon1 = CATEGORY_ICONS[cat1];
+    const icon2 = CATEGORY_ICONS[cat2];
+    
+    return `
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        <defs>
+          <clipPath id="leftHalf">
+            <rect x="0" y="0" width="${size/2}" height="${size}"/>
+          </clipPath>
+          <clipPath id="rightHalf">
+            <rect x="${size/2}" y="0" width="${size/2}" height="${size}"/>
+          </clipPath>
+        </defs>
+        <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 1}" fill="${bgColor}" stroke="${borderColor}" stroke-width="2"/>
+        <g clip-path="url(#leftHalf)">
+          <g transform="translate(${size/4 - iconSize/2}, ${(size - iconSize) / 2}) scale(${iconSize / 16})">
+            <path d="${icon1.path}" fill="white"/>
+          </g>
+        </g>
+        <g clip-path="url(#rightHalf)">
+          <g transform="translate(${size*3/4 - iconSize/2}, ${(size - iconSize) / 2}) scale(${iconSize / 16})">
+            <path d="${icon2.path}" fill="white"/>
+          </g>
+        </g>
+        <line x1="${size/2}" y1="4" x2="${size/2}" y2="${size - 4}" stroke="${borderColor}" stroke-width="1"/>
+      </svg>
+    `;
+  };
+
   // Update building markers
   useEffect(() => {
     if (!buildingMarkersRef.current) return;
@@ -485,37 +538,32 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
 
     CAMPUS_BUILDINGS.forEach(building => {
       const isSelected = selectedBuilding?.id === building.id;
+      const size = isSelected ? 28 : 24;
       
       const icon = L.divIcon({
         className: 'custom-building-marker',
         html: `
           <div style="
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 4px 8px;
-            background-color: ${isSelected ? 'hsl(142, 76%, 36%)' : 'hsl(217, 33%, 17%)'};
-            border: 2px solid ${isSelected ? 'hsl(142, 76%, 46%)' : 'hsl(217, 19%, 35%)'};
-            border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            cursor: pointer;
+            width: ${size}px;
+            height: ${size}px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)) ${isSelected ? 'drop-shadow(0 0 6px rgba(34, 197, 94, 0.6))' : ''};
             transition: all 0.2s ease;
-            ${isSelected ? 'transform: scale(1.1);' : ''}
+            cursor: pointer;
           ">
-            <span style="
-              font-size: 10px;
-              font-weight: 700;
-              color: ${isSelected ? 'white' : 'hsl(210, 40%, 80%)'};
-              white-space: nowrap;
-              letter-spacing: 0.5px;
-            ">${building.abbreviation}</span>
+            ${createBuildingMarkerSvg(building.categories, isSelected)}
           </div>
         `,
-        iconSize: [50, 24],
-        iconAnchor: [25, 12],
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
       });
 
       const marker = L.marker([building.lat, building.lon], { icon })
+        .bindTooltip(building.abbreviation, {
+          permanent: false,
+          direction: 'top',
+          offset: [0, -12],
+          className: 'building-tooltip',
+        })
         .on('click', () => onBuildingClick(building));
       
       marker.addTo(buildingMarkersRef.current!);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { CampusBuilding } from '@/lib/campusBuildings';
-import { X, Building2, MapPin, GraduationCap, History } from 'lucide-react';
+import { CampusBuilding, CATEGORY_ICONS } from '@/lib/campusBuildings';
+import { X, MapPin, GraduationCap, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BuildingCardProps {
@@ -114,13 +114,20 @@ const BuildingCard = ({ building, onClose }: BuildingCardProps) => {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-primary" />
+                <svg width="24" height="24" viewBox="0 0 16 16" className="text-primary fill-current">
+                  <path d={CATEGORY_ICONS[building.categories[0]].path} />
+                </svg>
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 rounded bg-primary/20 text-primary text-xs font-bold">
                     {building.abbreviation}
                   </span>
+                  {building.categories.map((cat) => (
+                    <span key={cat} className="px-2 py-0.5 rounded bg-secondary text-muted-foreground text-xs">
+                      {CATEGORY_ICONS[cat].label}
+                    </span>
+                  ))}
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mt-1">
                   {building.name}
@@ -141,7 +148,9 @@ const BuildingCard = ({ building, onClose }: BuildingCardProps) => {
           {/* Building Image Placeholder */}
           <div className="w-full h-40 rounded-xl bg-secondary mb-4 flex items-center justify-center overflow-hidden">
             <div className="text-center text-muted-foreground">
-              <Building2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <svg width="48" height="48" viewBox="0 0 16 16" className="mx-auto mb-2 opacity-50 fill-current">
+                <path d={CATEGORY_ICONS[building.categories[0]].path} />
+              </svg>
               <p className="text-sm">Building Image</p>
             </div>
           </div>
