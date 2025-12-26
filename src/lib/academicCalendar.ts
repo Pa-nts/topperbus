@@ -1,5 +1,6 @@
 // WKU Academic Calendar - Break periods when transit is not in service
 // These dates should be updated annually from: https://www.wku.edu/registrar/academic_calendars/
+// A Discord notification will be sent on January 1st to remind you to update these dates
 
 interface BreakPeriod {
   name: string;
@@ -8,7 +9,8 @@ interface BreakPeriod {
 }
 
 // Define break periods for the current academic year
-// Dates are based on WKU 2024-2025 Academic Calendar
+// Last updated: December 2024
+// Buses DO NOT run during winter semester - only fall and spring
 const BREAK_PERIODS: BreakPeriod[] = [
   // Fall 2024
   { 
@@ -24,38 +26,41 @@ const BREAK_PERIODS: BreakPeriod[] = [
   { 
     name: 'Winter Break', 
     start: new Date(2024, 11, 12), // December 12, 2024 (after finals end Dec 11)
-    end: new Date(2025, 0, 20)     // January 20, 2025 (MLK Day)
+    end: new Date(2025, 0, 19)     // January 19, 2025 (day before spring classes start Jan 20)
   },
   
-  // Spring 2025
+  // Spring 2026
   { 
     name: 'Spring Break', 
-    start: new Date(2025, 2, 17),  // March 17, 2025
-    end: new Date(2025, 2, 21)     // March 21, 2025
+    start: new Date(2026, 2, 16),  // March 16, 2026
+    end: new Date(2026, 2, 20)     // March 20, 2026
   },
   { 
     name: 'Summer Break', 
-    start: new Date(2025, 4, 9),   // May 9, 2025 (after spring commencement)
-    end: new Date(2025, 7, 18)     // August 18, 2025 (fall classes begin Aug 19)
+    start: new Date(2026, 4, 8),   // May 8, 2026 (after spring commencement May 7)
+    end: new Date(2026, 7, 17)     // August 17, 2026 (day before fall classes start Aug 18)
   },
   
-  // Fall 2025 (projected - update when official calendar released)
+  // Fall 2025
   { 
     name: 'Fall Break', 
-    start: new Date(2025, 9, 6),   // Early October 2025 (estimate)
-    end: new Date(2025, 9, 7)
+    start: new Date(2025, 9, 6),   // October 6, 2025
+    end: new Date(2025, 9, 7)      // October 7, 2025
   },
   { 
     name: 'Thanksgiving Break', 
-    start: new Date(2025, 10, 26), // Late November 2025 (estimate)
-    end: new Date(2025, 10, 28)
+    start: new Date(2025, 10, 26), // November 26, 2025
+    end: new Date(2025, 10, 28)    // November 28, 2025
   },
   { 
     name: 'Winter Break', 
-    start: new Date(2025, 11, 5),  // December 2025 (estimate)
-    end: new Date(2026, 0, 19)     // January 2026 (estimate)
+    start: new Date(2025, 11, 12), // December 12, 2025 (after finals end Dec 11)
+    end: new Date(2026, 0, 19)     // January 19, 2026 (day before spring classes start Jan 20)
   },
 ];
+
+// Sort break periods by start date for proper ordering
+BREAK_PERIODS.sort((a, b) => a.start.getTime() - b.start.getTime());
 
 /**
  * Check if a given date falls within a school break period
@@ -125,4 +130,23 @@ export const getNextBreakPeriod = (date: Date = new Date()): BreakPeriod | null 
   }
   
   return null;
+};
+
+/**
+ * Get the last defined break period end date
+ * Used to determine if calendar needs updating
+ */
+export const getLastDefinedDate = (): Date => {
+  if (BREAK_PERIODS.length === 0) {
+    return new Date();
+  }
+  
+  let lastDate = BREAK_PERIODS[0].end;
+  for (const period of BREAK_PERIODS) {
+    if (period.end > lastDate) {
+      lastDate = period.end;
+    }
+  }
+  
+  return lastDate;
 };
