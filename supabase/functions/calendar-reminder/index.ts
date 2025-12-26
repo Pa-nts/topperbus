@@ -6,14 +6,12 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const discordWebhookUrl = Deno.env.get('DISCORD_WEBHOOK_URL');
-    const adminEmail = Deno.env.get('ADMIN_EMAIL');
     
     if (!discordWebhookUrl) {
       console.error('DISCORD_WEBHOOK_URL not configured');
@@ -25,12 +23,11 @@ serve(async (req) => {
 
     const currentYear = new Date().getFullYear();
     
-    // Compose the Discord message
     const message = {
       embeds: [{
         title: "🚌 WKU Bus Calendar Update Reminder",
-        description: `**Happy New Year ${currentYear}!**\n\nThis is your annual reminder to update the WKU transit academic calendar dates.\n\nThe break periods in the app may be outdated and need to be refreshed with the new academic year's schedule.`,
-        color: 0xC62828, // Red color for visibility
+        description: `**Happy New Year ${currentYear}!**\n\nTime to update the WKU transit academic calendar dates.`,
+        color: 0xC62828,
         fields: [
           {
             name: "📅 Calendar Source",
@@ -41,16 +38,9 @@ serve(async (req) => {
             name: "📝 File to Update",
             value: "`src/lib/academicCalendar.ts`",
             inline: false
-          },
-          {
-            name: "🔧 What to Update",
-            value: "• Fall Break dates\n• Thanksgiving Break dates\n• Winter Break dates (after finals)\n• Spring Break dates\n• Summer Break dates",
-            inline: false
           }
         ],
-        footer: {
-          text: adminEmail ? `Sent to admin: ${adminEmail}` : "WKU Transit App"
-        },
+        footer: { text: "WKU Transit App" },
         timestamp: new Date().toISOString()
       }]
     };
@@ -59,9 +49,7 @@ serve(async (req) => {
     
     const discordResponse = await fetch(discordWebhookUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(message),
     });
 
