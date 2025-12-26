@@ -12,6 +12,46 @@ export interface CampusBuilding {
   imageUrl?: string;
 }
 
+export const CATEGORY_ICONS: Record<BuildingCategory, { path: string; label: string }> = {
+  academic: {
+    path: 'M8 0L0 4v1h16V4L8 0zM1 6v7h2V6H1zm4 0v7h2V6H5zm4 0v7h2V6H9zm4 0v7h2V6h-2zM0 14v2h16v-2H0z',
+    label: 'Academic',
+  },
+  residential: {
+    path: 'M8 0L0 6v10h6v-5h4v5h6V6L8 0zm0 9a2 2 0 110-4 2 2 0 010 4z',
+    label: 'Residential',
+  },
+  dining: {
+    path: 'M2 0v7c0 1.1.9 2 2 2h1v7h2V9h1c1.1 0 2-.9 2-2V0H8v5H6V0H4v5H2V0zm10 0v6h2v4h-2v6h2V10h2V4c0-2.2-1.8-4-4-4z',
+    label: 'Dining',
+  },
+  administrative: {
+    path: 'M8 0L0 3v2h16V3L8 0zM2 6v8H0v2h16v-2h-2V6h-3v8H9V6H7v8H5V6H2z',
+    label: 'Administrative',
+  },
+  athletics: {
+    path: 'M12 4a4 4 0 00-8 0c0 1.5.8 2.8 2 3.5V16h4V7.5c1.2-.7 2-2 2-3.5zm-4-2a2 2 0 110 4 2 2 0 010-4z',
+    label: 'Athletics',
+  },
+  library: {
+    path: 'M8 0L1 3v13h2V5l5-2 5 2v11h2V3L8 0zM4 6v9h2V7l2-.8 2 .8v8h2V6L8 4 4 6z',
+    label: 'Library',
+  },
+  recreation: {
+    path: 'M8 0a3 3 0 100 6 3 3 0 000-6zM4 7c-1.1 0-2 .9-2 2v5h2v2h8v-2h2V9c0-1.1-.9-2-2-2H4z',
+    label: 'Recreation',
+  },
+  parking: {
+    path: 'M2 0C.9 0 0 .9 0 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V2c0-1.1-.9-2-2-2H2zm4 3h4c1.7 0 3 1.3 3 3s-1.3 3-3 3H8v4H6V3zm2 4h2c.6 0 1-.4 1-1s-.4-1-1-1H8v2z',
+    label: 'Parking',
+  },
+  health: {
+    path: 'M14 5h-3V2c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v3H2c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h3v3c0 1.1.9 2 2 2h2c1.1 0 2-.9 2-2v-3h3c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2z',
+    label: 'Health',
+  },
+};
+
+
 // Category icons as SVG paths (16x16 viewBox)
 // WKU Campus Buildings - Expanded with South Campus and Parking
 export const CAMPUS_BUILDINGS: CampusBuilding[] = [
