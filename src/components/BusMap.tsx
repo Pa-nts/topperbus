@@ -427,6 +427,52 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
     });
   }, [vehicles, displayedRoutes, routes, selectedVehicle, onVehicleClick]);
 
+  // Fit map to selected route bounds
+  useEffect(() => {
+    if (!mapRef.current) return;
+    
+    if (selectedRoute) {
+      const route = routes.find(r => r.tag === selectedRoute);
+      if (route && route.paths.length > 0) {
+        // Collect all points from the route's paths
+        const allPoints: [number, number][] = [];
+        route.paths.forEach(path => {
+          path.forEach(point => {
+            allPoints.push([point.lat, point.lon]);
+          });
+        });
+        
+        if (allPoints.length > 0) {
+          const bounds = L.latLngBounds(allPoints);
+          mapRef.current.fitBounds(bounds, {
+            animate: true,
+            duration: 0.5,
+            padding: [50, 50], // Add some padding around the route
+          });
+        }
+      }
+    } else {
+      // When deselecting, zoom back to show all routes
+      const allPoints: [number, number][] = [];
+      routes.forEach(route => {
+        route.paths.forEach(path => {
+          path.forEach(point => {
+            allPoints.push([point.lat, point.lon]);
+          });
+        });
+      });
+      
+      if (allPoints.length > 0) {
+        const bounds = L.latLngBounds(allPoints);
+        mapRef.current.fitBounds(bounds, {
+          animate: true,
+          duration: 0.5,
+          padding: [50, 50],
+        });
+      }
+    }
+  }, [selectedRoute, routes]);
+
   // Center on selected stop
   useEffect(() => {
     if (selectedStop && mapRef.current && !selectedVehicle) {
