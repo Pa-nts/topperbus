@@ -32,6 +32,9 @@ const Index = () => {
   const [view, setView] = useState<'map' | 'list'>('map');
   const [stopSearch, setStopSearch] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [directionsDestination, setDirectionsDestination] = useState<CampusBuilding | null>(null);
 
   // Initial data load
   useEffect(() => {
@@ -166,6 +169,41 @@ const Index = () => {
       setIsRefreshing(false);
     }
   };
+
+  const handleGetLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        });
+        setIsLocating(false);
+        toast.success('Location found');
+      },
+      (error) => {
+        setIsLocating(false);
+        toast.error('Unable to get your location');
+        console.error('Geolocation error:', error);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, []);
+
+  const handleGetDirections = useCallback((building: CampusBuilding) => {
+    if (!userLocation) {
+      toast.error('Please enable location first');
+      return;
+    }
+    setDirectionsDestination(building);
+    setSelectedBuilding(building);
+    setView('map');
+    toast.success(`Getting directions to ${building.name}`);
+  }, [userLocation]);
 
   if (loading) {
     return (
@@ -376,6 +414,9 @@ const Index = () => {
             onVehicleClick={handleVehicleClick}
             onBuildingClick={handleBuildingClick}
             isVisible={view === 'map'}
+            userLocation={userLocation}
+            directionsDestination={directionsDestination}
+            onClearDirections={() => setDirectionsDestination(null)}
           />
           {!selectedRoute && (
             <RouteLegend routes={routes} vehicles={vehicles} />
