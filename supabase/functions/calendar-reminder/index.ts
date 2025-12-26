@@ -48,8 +48,8 @@ serve(async (req) => {
     if (!discordWebhookUrl) {
       console.error('DISCORD_WEBHOOK_URL not configured');
       return new Response(
-        JSON.stringify({ success: false, error: 'Discord webhook not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Service temporarily unavailable' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
