@@ -33,6 +33,15 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
+// Remove control characters and normalize whitespace
+function normalizeInput(text: string): string {
+  return text
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control chars
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // Remove zero-width chars
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+}
+
 // Sanitize text to prevent Discord markdown injection
 function sanitizeForDiscord(text: string): string {
   // Escape Discord markdown characters
@@ -111,8 +120,9 @@ serve(async (req) => {
       );
     }
 
-    const trimmedMessage = message.trim();
-    if (trimmedMessage.length < 10 || trimmedMessage.length > 2000) {
+    // Normalize and validate message
+    const normalizedMessage = normalizeInput(message);
+    if (normalizedMessage.length < 10 || normalizedMessage.length > 2000) {
       return new Response(
         JSON.stringify({ error: 'Message must be between 10 and 2000 characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -159,8 +169,8 @@ serve(async (req) => {
     };
 
     // Sanitize content before sending to Discord
-    const sanitizedMessage = sanitizeForDiscord(trimmedMessage);
-    const sanitizedEmail = email ? sanitizeForDiscord(email.trim()) : null;
+    const sanitizedMessage = sanitizeForDiscord(normalizedMessage);
+    const sanitizedEmail = email ? sanitizeForDiscord(normalizeInput(email)) : null;
 
     const discordMessage = {
       embeds: [{
