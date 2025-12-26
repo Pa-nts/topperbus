@@ -9,6 +9,35 @@ interface FeedbackRequest {
   type: 'suggestion' | 'bug' | 'feedback';
   message: string;
   email?: string;
+  turnstileToken: string;
+}
+
+// Verify Cloudflare Turnstile token
+async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
+  const secretKey = Deno.env.get('TURNSTILE_SECRET_KEY');
+  if (!secretKey) {
+    console.error('TURNSTILE_SECRET_KEY not configured');
+    return false;
+  }
+
+  try {
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        secret: secretKey,
+        response: token,
+        remoteip: ip,
+      }),
+    });
+
+    const result = await response.json();
+    console.log('Turnstile verification result:', { success: result.success });
+    return result.success === true;
+  } catch (error) {
+    console.error('Turnstile verification error:', error);
+    return false;
+  }
 }
 
 // Simple in-memory rate limiter (resets on cold start, but provides basic protection)
@@ -102,7 +131,23 @@ serve(async (req) => {
       );
     }
 
-    const { type, message, email } = body as FeedbackRequest;
+    const { type, message, email, turnstileToken } = body as FeedbackRequest;
+
+    // Verify Turnstile token first
+    if (!turnstileToken || typeof turnstileToken !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'CAPTCHA verification required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const isValidCaptcha = await verifyTurnstile(turnstileToken, clientIp);
+    if (!isValidCaptcha) {
+      return new Response(
+        JSON.stringify({ error: 'CAPTCHA verification failed. Please try again.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Validate type
     if (!type || !['suggestion', 'bug', 'feedback'].includes(type)) {

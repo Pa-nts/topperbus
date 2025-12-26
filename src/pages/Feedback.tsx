@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Send, MessageSquare, Bug, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import TurnstileWidget from '@/components/TurnstileWidget';
 
 type FeedbackType = 'suggestion' | 'bug' | 'feedback';
 
@@ -25,6 +26,7 @@ const Feedback = () => {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   // Check cooldown on mount and update timer
   useEffect(() => {
@@ -60,11 +62,16 @@ const Feedback = () => {
       return;
     }
 
+    if (!turnstileToken) {
+      toast.error('Please complete the CAPTCHA verification');
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
       const { data, error } = await supabase.functions.invoke('send-feedback', {
-        body: { type, message: message.trim(), email: email.trim() || undefined }
+        body: { type, message: message.trim(), email: email.trim() || undefined, turnstileToken }
       });
 
       if (error) throw error;
@@ -82,6 +89,7 @@ const Feedback = () => {
       setMessage('');
       setEmail('');
       setType('feedback');
+      setTurnstileToken(null);
     } catch (error) {
       console.error('Error sending feedback:', error);
       toast.error('Failed to send feedback. Please try again.');
@@ -90,7 +98,15 @@ const Feedback = () => {
     }
   };
 
-  const isDisabled = isSubmitting || !message.trim() || cooldownRemaining > 0;
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
+
+  const isDisabled = isSubmitting || !message.trim() || cooldownRemaining > 0 || !turnstileToken;
 
   return (
     <main className="min-h-screen bg-background">
@@ -174,6 +190,15 @@ const Feedback = () => {
             <p className="text-xs text-muted-foreground">
               Only if you'd like a response to your feedback
             </p>
+          </div>
+
+          {/* CAPTCHA */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Verify you're human</label>
+            <TurnstileWidget
+              onVerify={handleTurnstileVerify}
+              onExpire={handleTurnstileExpire}
+            />
           </div>
 
           {/* Submit */}
