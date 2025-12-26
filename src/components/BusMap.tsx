@@ -2,6 +2,7 @@ import { useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Route, VehicleLocation, Stop } from '@/types/transit';
+import { CAMPUS_BUILDINGS, CampusBuilding } from '@/lib/campusBuildings';
 
 interface BusMapProps {
   routes: Route[];
@@ -9,8 +10,10 @@ interface BusMapProps {
   selectedRoute: string | null;
   selectedStop: Stop | null;
   selectedVehicle: VehicleLocation | null;
+  selectedBuilding: CampusBuilding | null;
   onStopClick: (stop: Stop, route: Route) => void;
   onVehicleClick: (vehicle: VehicleLocation, route: Route) => void;
+  onBuildingClick: (building: CampusBuilding) => void;
   isVisible?: boolean;
 }
 
@@ -23,12 +26,13 @@ const ROUTE_STYLES: Record<number, { dashArray?: string; weight: number; offset:
   4: { weight: 3, offset: -5 },
 };
 
-const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle, onStopClick, onVehicleClick, isVisible = true }: BusMapProps) => {
+const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle, selectedBuilding, onStopClick, onVehicleClick, onBuildingClick, isVisible = true }: BusMapProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
   const polylinesRef = useRef<L.LayerGroup | null>(null);
   const vehicleMarkersRef = useRef<L.LayerGroup | null>(null);
+  const buildingMarkersRef = useRef<L.LayerGroup | null>(null);
 
   // Initialize map
   useEffect(() => {
@@ -53,6 +57,7 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
     markersRef.current = L.layerGroup().addTo(mapRef.current);
     polylinesRef.current = L.layerGroup().addTo(mapRef.current);
     vehicleMarkersRef.current = L.layerGroup().addTo(mapRef.current);
+    buildingMarkersRef.current = L.layerGroup().addTo(mapRef.current);
 
     return () => {
       mapRef.current?.remove();
@@ -472,6 +477,60 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
       }
     }
   }, [selectedRoute, routes]);
+
+  // Update building markers
+  useEffect(() => {
+    if (!buildingMarkersRef.current) return;
+    buildingMarkersRef.current.clearLayers();
+
+    CAMPUS_BUILDINGS.forEach(building => {
+      const isSelected = selectedBuilding?.id === building.id;
+      
+      const icon = L.divIcon({
+        className: 'custom-building-marker',
+        html: `
+          <div style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 8px;
+            background-color: ${isSelected ? 'hsl(142, 76%, 36%)' : 'hsl(217, 33%, 17%)'};
+            border: 2px solid ${isSelected ? 'hsl(142, 76%, 46%)' : 'hsl(217, 19%, 35%)'};
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            ${isSelected ? 'transform: scale(1.1);' : ''}
+          ">
+            <span style="
+              font-size: 10px;
+              font-weight: 700;
+              color: ${isSelected ? 'white' : 'hsl(210, 40%, 80%)'};
+              white-space: nowrap;
+              letter-spacing: 0.5px;
+            ">${building.abbreviation}</span>
+          </div>
+        `,
+        iconSize: [50, 24],
+        iconAnchor: [25, 12],
+      });
+
+      const marker = L.marker([building.lat, building.lon], { icon })
+        .on('click', () => onBuildingClick(building));
+      
+      marker.addTo(buildingMarkersRef.current!);
+    });
+  }, [selectedBuilding, onBuildingClick]);
+
+  // Center on selected building
+  useEffect(() => {
+    if (selectedBuilding && mapRef.current && !selectedStop && !selectedVehicle) {
+      mapRef.current.setView([selectedBuilding.lat, selectedBuilding.lon], 17, {
+        animate: true,
+        duration: 0.5,
+      });
+    }
+  }, [selectedBuilding, selectedStop, selectedVehicle]);
 
   // Center on selected stop
   useEffect(() => {

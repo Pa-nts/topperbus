@@ -1,0 +1,198 @@
+export interface CampusBuilding {
+  id: string;
+  name: string;
+  abbreviation: string;
+  lat: number;
+  lon: number;
+  department: string;
+  description: string;
+  imageUrl?: string;
+}
+
+// WKU Campus Buildings - coordinates are approximate
+export const CAMPUS_BUILDINGS: CampusBuilding[] = [
+  {
+    id: 'dsu',
+    name: 'Downing Student Union',
+    abbreviation: 'DSU',
+    lat: 36.9861,
+    lon: -86.4545,
+    department: 'Student Affairs',
+    description: 'The Downing Student Union serves as the heart of campus life at WKU. Named after Dero G. Downing, the university\'s fourth president, it houses dining options, meeting spaces, the WKU Store, and student organization offices. The building underwent major renovations and reopened in 2014.',
+  },
+  {
+    id: 'grise',
+    name: 'Grise Hall',
+    abbreviation: 'GH',
+    lat: 36.9867,
+    lon: -86.4532,
+    department: 'Potter College of Arts & Letters',
+    description: 'Grise Hall is home to the English, History, Philosophy & Religion, and Political Science departments. Named after Finley C. Grise, dean of the college from 1927-1959, the building has been a center for humanities education since its construction in 1970.',
+  },
+  {
+    id: 'cherry',
+    name: 'Cherry Hall',
+    abbreviation: 'CH',
+    lat: 36.9857,
+    lon: -86.4557,
+    department: 'Administration',
+    description: 'Cherry Hall is WKU\'s most iconic building, named after Henry Hardin Cherry, the university\'s founder. Built in 1937, this Collegiate Gothic structure sits atop "The Hill" and serves as the administrative heart of the university. Its distinctive tower is visible across Bowling Green.',
+  },
+  {
+    id: 'tccw',
+    name: 'Tate Page Hall',
+    abbreviation: 'TPH',
+    lat: 36.9870,
+    lon: -86.4561,
+    department: 'College of Education & Behavioral Sciences',
+    description: 'Tate Page Hall houses the College of Education and Behavioral Sciences. Named after Dr. Tate C. Page, former dean of the College of Education, the building is dedicated to preparing future educators and counselors.',
+  },
+  {
+    id: 'snell',
+    name: 'Snell Hall',
+    abbreviation: 'SH',
+    lat: 36.9849,
+    lon: -86.4535,
+    department: 'Ogden College of Science & Engineering',
+    description: 'Snell Hall is a key facility for science education at WKU, housing laboratories and classrooms for various science departments. The building supports hands-on learning in biology, chemistry, and other scientific disciplines.',
+  },
+  {
+    id: 'est',
+    name: 'Environmental Sciences & Technology',
+    abbreviation: 'EST',
+    lat: 36.9839,
+    lon: -86.4521,
+    department: 'Ogden College of Science & Engineering',
+    description: 'The Environmental Sciences and Technology Building is a state-of-the-art facility supporting environmental research and education. It houses programs in geography, geology, and environmental science.',
+  },
+  {
+    id: 'fac',
+    name: 'Fine Arts Center',
+    abbreviation: 'FAC',
+    lat: 36.9876,
+    lon: -86.4538,
+    department: 'Potter College of Arts & Letters',
+    description: 'The Ivan Wilson Fine Arts Center houses the Art, Music, and Theatre & Dance departments. Named after renowned Kentucky artist Ivan Wilson, the building features galleries, performance spaces, and studios for creative expression.',
+  },
+  {
+    id: 'mass',
+    name: 'Mass Media & Technology Hall',
+    abbreviation: 'MMTH',
+    lat: 36.9854,
+    lon: -86.4572,
+    department: 'Potter College of Arts & Letters',
+    description: 'Mass Media and Technology Hall is home to the School of Journalism & Broadcasting. The building features professional broadcast studios, newsrooms, and production facilities where students learn hands-on media skills.',
+  },
+  {
+    id: 'helm',
+    name: 'Helm-Cravens Library',
+    abbreviation: 'LIB',
+    lat: 36.9863,
+    lon: -86.4554,
+    department: 'University Libraries',
+    description: 'Helm-Cravens Library serves as WKU\'s main library, offering extensive collections, study spaces, and research support. The complex combines Helm Library (1931) and Cravens Library (1969), named for Margie Helm and Raymond Cravens.',
+  },
+  {
+    id: 'ges',
+    name: 'Gary A. Ransdell Hall',
+    abbreviation: 'GRH',
+    lat: 36.9832,
+    lon: -86.4515,
+    department: 'Gordon Ford College of Business',
+    description: 'Gary A. Ransdell Hall houses the Gordon Ford College of Business. Named after WKU\'s ninth president, this modern facility provides state-of-the-art classrooms, a trading room, and collaborative spaces for business education.',
+  },
+  {
+    id: 'houchens',
+    name: 'L.T. Smith Stadium',
+    abbreviation: 'STAD',
+    lat: 36.9818,
+    lon: -86.4621,
+    department: 'Athletics',
+    description: 'Houchens Industries–L.T. Smith Stadium is home to WKU Hilltopper Football. Originally built in 1968 and renovated multiple times, the stadium seats over 22,000 fans and features modern amenities.',
+  },
+  {
+    id: 'diddle',
+    name: 'E.A. Diddle Arena',
+    abbreviation: 'DA',
+    lat: 36.9825,
+    lon: -86.4600,
+    department: 'Athletics',
+    description: 'E.A. Diddle Arena is the home of WKU Basketball, named after legendary coach Ed Diddle. The arena, opened in 1963, seats over 7,300 and is famous for the red towels waved by fans, a tradition started by Coach Diddle.',
+  },
+  {
+    id: 'preston',
+    name: 'Preston Center',
+    abbreviation: 'PC',
+    lat: 36.9833,
+    lon: -86.4583,
+    department: 'Student Affairs',
+    description: 'The Raymond B. Preston Health and Activities Center is WKU\'s main recreation facility. It offers fitness equipment, basketball courts, a pool, rock climbing wall, and various wellness programs for students.',
+  },
+  {
+    id: 'jody',
+    name: 'Jody Richards Hall',
+    abbreviation: 'JRH',
+    lat: 36.9845,
+    lon: -86.4585,
+    department: 'Potter College of Arts & Letters',
+    description: 'Jody Richards Hall houses Communication Sciences & Disorders and other programs. Named after former Kentucky House Speaker Jody Richards, a WKU alumnus, the building supports healthcare and communication education.',
+  },
+  {
+    id: 'thompson',
+    name: 'Thompson Complex',
+    abbreviation: 'TC',
+    lat: 36.9853,
+    lon: -86.4525,
+    department: 'Ogden College of Science & Engineering',
+    description: 'The Thompson Complex houses chemistry and physics programs. Named for Dr. Kelly Thompson, WKU\'s third president, it features laboratories, lecture halls, and research facilities for the physical sciences.',
+  },
+  {
+    id: 'wku-health',
+    name: 'WKU Health Services',
+    abbreviation: 'HS',
+    lat: 36.9841,
+    lon: -86.4548,
+    department: 'Student Affairs',
+    description: 'WKU Health Services provides medical care, counseling, and wellness resources to students. The facility offers primary care, mental health services, and health education programs.',
+  },
+  {
+    id: 'parking',
+    name: 'Parking Structure',
+    abbreviation: 'PS',
+    lat: 36.9829,
+    lon: -86.4544,
+    department: 'Parking & Transportation',
+    description: 'The WKU Parking Structure provides convenient parking for students, faculty, and visitors. It offers multiple levels of parking spaces close to the center of campus.',
+  },
+  {
+    id: 'augenstein',
+    name: 'Augenstein Alumni Center',
+    abbreviation: 'AAC',
+    lat: 36.9847,
+    lon: -86.4515,
+    department: 'WKU Alumni Association',
+    description: 'The Augenstein Alumni Center serves as the home of the WKU Alumni Association. The facility hosts events, meetings, and programs connecting alumni with current students and the university.',
+  },
+  {
+    id: 'wh',
+    name: 'Wetherby Administration Building',
+    abbreviation: 'WAB',
+    lat: 36.9853,
+    lon: -86.4563,
+    department: 'Administration',
+    description: 'Wetherby Administration Building houses key university offices including the President\'s Office, Provost, and other administrative functions. Named after former Kentucky Governor Lawrence Wetherby.',
+  },
+  {
+    id: 'science',
+    name: 'Science & Technology Hall',
+    abbreviation: 'STH',
+    lat: 36.9836,
+    lon: -86.4527,
+    department: 'Ogden College of Science & Engineering',
+    description: 'Science and Technology Hall is a modern facility supporting STEM education at WKU. It features advanced laboratories, collaborative learning spaces, and technology-enhanced classrooms.',
+  },
+];
+
+export const getBuildingById = (id: string): CampusBuilding | undefined => {
+  return CAMPUS_BUILDINGS.find(b => b.id === id);
+};

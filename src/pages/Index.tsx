@@ -9,6 +9,8 @@ import StopCard from '@/components/StopCard';
 import StopList from '@/components/StopList';
 import QRScanner from '@/components/QRScanner';
 import RouteLegend from '@/components/RouteLegend';
+import BuildingCard from '@/components/BuildingCard';
+import { CampusBuilding } from '@/lib/campusBuildings';
 import { Bus, ScanLine, List, Map as MapIcon, RefreshCw, Calendar, AlertTriangle, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -24,6 +26,7 @@ const Index = () => {
   const [selectedStopRoute, setSelectedStopRoute] = useState<Route | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleLocation | null>(null);
   const [selectedVehicleRoute, setSelectedVehicleRoute] = useState<Route | null>(null);
+  const [selectedBuilding, setSelectedBuilding] = useState<CampusBuilding | null>(null);
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
   const [view, setView] = useState<'map' | 'list'>('map');
@@ -127,6 +130,19 @@ const Index = () => {
   const handleCloseVehicle = useCallback(() => {
     setSelectedVehicle(null);
     setSelectedVehicleRoute(null);
+  }, []);
+
+  const handleBuildingClick = useCallback((building: CampusBuilding) => {
+    setSelectedBuilding(building);
+    // Close other cards
+    setSelectedStop(null);
+    setSelectedStopRoute(null);
+    setSelectedVehicle(null);
+    setSelectedVehicleRoute(null);
+  }, []);
+
+  const handleCloseBuilding = useCallback(() => {
+    setSelectedBuilding(null);
   }, []);
 
   const handleQRScan = (stopId: string) => {
@@ -355,8 +371,10 @@ const Index = () => {
             selectedRoute={selectedRoute}
             selectedStop={selectedStop}
             selectedVehicle={selectedVehicle}
+            selectedBuilding={selectedBuilding}
             onStopClick={handleStopClick}
             onVehicleClick={handleVehicleClick}
+            onBuildingClick={handleBuildingClick}
             isVisible={view === 'map'}
           />
           {!selectedRoute && (
@@ -396,6 +414,14 @@ const Index = () => {
           route={selectedVehicleRoute}
           allRoutes={routes}
           onClose={handleCloseVehicle}
+        />
+      )}
+
+      {/* Selected building card */}
+      {selectedBuilding && (
+        <BuildingCard
+          building={selectedBuilding}
+          onClose={handleCloseBuilding}
         />
       )}
 
