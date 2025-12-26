@@ -539,7 +539,7 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
     CAMPUS_BUILDINGS.forEach(building => {
       const isSelected = selectedBuilding?.id === building.id;
       const size = isSelected ? 28 : 24;
-      
+
       const icon = L.divIcon({
         className: 'custom-building-marker',
         html: `
@@ -565,10 +565,10 @@ const BusMap = ({ routes, vehicles, selectedRoute, selectedStop, selectedVehicle
           className: 'building-tooltip',
         })
         .on('click', () => onBuildingClick(building));
-      
+
       marker.addTo(buildingMarkersRef.current!);
     });
-  }, [selectedBuilding, onBuildingClick]);
+  }, [selectedBuilding, onBuildingClick, CAMPUS_BUILDINGS]);
 
   // Center on selected building
   useEffect(() => {
